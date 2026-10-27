@@ -2893,3 +2893,95 @@ body {
   color: #ffffff;
   transform: scale(1.1);
 }
+
+/* ==========================================================================
+   Google Sheets Real-Time Sync Indicator Badges
+   ========================================================================== */
+.sheets-sync-badge-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border-radius: 12px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  backdrop-filter: blur(8px);
+}
+
+.sheets-sync-badge-pill.connected {
+  background: rgba(16, 185, 129, 0.18);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  color: #6ee7b7;
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.25);
+}
+
+.sheets-sync-badge-pill.disconnected {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #94a3b8;
+}
+
+.sheets-live-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.sheets-sync-badge-pill.connected .sheets-live-dot {
+  background: #10b981;
+  box-shadow: 0 0 8px #10b981;
+  animation: pulseGreen 2s infinite;
+}
+
+.sheets-sync-badge-pill.disconnected .sheets-live-dot {
+  background: #64748b;
+}
+
+.action-btn-sheets {
+  position: relative;
+}
+
+.action-badge-dot {
+  position: absolute;
+  top: 2px;
+  right: 12px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #10b981;
+  border: 2px solid #111827;
+  box-shadow: 0 0 8px #10b981;
+  display: none;
+}
+
+.action-badge-dot.active {
+  display: block;
+  animation: pulseGreen 2s infinite;
+}
+
+.btn-test-webhook {
+  width: 100%;
+  margin-top: 10px;
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  color: #6ee7b7;
+  border-radius: var(--radius-sm);
+  padding: 9px 12px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+}
+
+.btn-test-webhook:hover {
+  background: rgba(16, 185, 129, 0.28);
+  color: #fff;
+}
+

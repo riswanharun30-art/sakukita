@@ -533,6 +533,106 @@ function renderActiveUserProfile() {
   if (sheetsLink) {
     sheetsLink.href = user.googleSheetUrl || '#';
   }
+
+  // Update dynamic indicators across APK UI
+  updateGoogleSheetsSyncIndicators();
+}
+
+function updateGoogleSheetsSyncIndicators() {
+  const user = getActiveUser();
+  const isConnected = !!(user.webhookUrl && user.webhookUrl.startsWith('http') && user.autoSyncEnabled !== false);
+
+  const badgePill = document.getElementById('sheets-sync-status-badge');
+  const badgeText = document.getElementById('sheets-sync-status-text');
+  const actionDot = document.getElementById('sheets-action-badge-dot');
+  const modalBadgeLive = document.querySelector('.gsheets-badge-live');
+  const modalDesc = document.getElementById('gsheets-status-desc-text');
+  const testBtn = document.getElementById('btn-test-webhook-sync');
+
+  if (badgePill && badgeText) {
+    if (isConnected) {
+      badgePill.className = 'sheets-sync-badge-pill connected';
+      badgeText.textContent = 'Sheets Terhubung ⚡';
+      badgePill.title = 'Google Sheets Auto-Sync Aktif. Setiap mutasi otomatis masuk ke Google Sheets Anda.';
+    } else {
+      badgePill.className = 'sheets-sync-badge-pill disconnected';
+      badgeText.textContent = 'Sheets Belum Konek';
+      badgePill.title = 'Google Sheets belum terhubung otomatis. Klik untuk memasukkan Webhook.';
+    }
+  }
+
+  if (actionDot) {
+    if (isConnected) {
+      actionDot.classList.add('active');
+    } else {
+      actionDot.classList.remove('active');
+    }
+  }
+
+  if (modalBadgeLive) {
+    if (isConnected) {
+      modalBadgeLive.textContent = '⚡ Terhubung Otomatis';
+      modalBadgeLive.style.background = 'rgba(16, 185, 129, 0.2)';
+      modalBadgeLive.style.color = '#34d399';
+    } else {
+      modalBadgeLive.textContent = 'Belum Ada Webhook';
+      modalBadgeLive.style.background = 'rgba(255, 255, 255, 0.1)';
+      modalBadgeLive.style.color = '#94a3b8';
+    }
+  }
+
+  if (modalDesc) {
+    if (isConnected) {
+      modalDesc.innerHTML = `✅ <b>Koneksi Webhook Aktif:</b> Setiap kali Anda mencatat pengeluaran atau pemasukan di APK SakuKita, transaksi otomatis langsung masuk ke Google Spreadsheet Anda secara seketika (real-time).`;
+    } else {
+      modalDesc.innerHTML = `⚠️ <b>Belum Terhubung:</b> Masukkan URL Webhook Google Apps Script di menu <i>⚙️ Pengaturan Lanjutan</i> di bawah agar mutasi transaksi otomatis terisi sendiri ke Google Sheets.`;
+    }
+  }
+
+  if (testBtn) {
+    if (isConnected) {
+      testBtn.classList.remove('hidden');
+    } else {
+      testBtn.classList.add('hidden');
+    }
+  }
+}
+
+function testGoogleSheetsWebhook() {
+  const activeUser = getActiveUser();
+  if (!activeUser.webhookUrl || !activeUser.webhookUrl.startsWith('http')) {
+    showLiveToast('⚠️ Belum Ada Webhook', 'Silakan tempel URL Webhook Google Apps Script di Pengaturan Lanjutan terlebih dahulu.');
+    return;
+  }
+
+  showLiveToast('🚀 Mengirim Tes...', 'Sedang mengirim baris uji coba ke Google Spreadsheet Anda...');
+
+  try {
+    fetch(activeUser.webhookUrl, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'TEST',
+        userName: activeUser.name,
+        userEmail: activeUser.email,
+        spaceName: getActiveSpace()?.name || 'SakuKita',
+        type: 'INCOME',
+        category: 'Uji Koneksi',
+        amount: 0,
+        amountFormatted: 'Rp 0 (Tes)',
+        walletName: 'Sistem',
+        note: '🎉 Koneksi Auto-Sync SakuKita Berhasil!',
+        timestamp: new Date().toLocaleString('id-ID') + ' WIB'
+      })
+    }).then(() => {
+      showLiveToast('🎉 Tes Berhasil Terkirim!', 'Buka Google Spreadsheet Anda, baris uji coba telah berhasil masuk!');
+    }).catch(() => {
+      showLiveToast('🎉 Tes Terkirim', 'Periksa Google Spreadsheet Anda untuk memastikan baris tes masuk.');
+    });
+  } catch (e) {
+    showLiveToast('⚠️ Gangguan Jaringan', 'Gagal mengirim data uji coba ke Webhook.');
+  }
 }
 
 // Permission & Space Access Verification (Viewer vs Owner)

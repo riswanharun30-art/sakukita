@@ -125,6 +125,11 @@
           </div>
           <div class="role-and-sync-row">
             <span id="access-role-tag" class="role-badge role-owner">👑 Pemilik</span>
+            <div id="sheets-sync-status-badge" class="sheets-sync-badge-pill disconnected"
+              onclick="openGoogleSheetsModal()" title="Status Sinkronisasi Google Sheets">
+              <span class="sheets-live-dot"></span>
+              <span id="sheets-sync-status-text">Sheets Belum Konek</span>
+            </div>
             <div class="status-badge-mini" id="sync-status">
               <span class="pulse-dot"></span>
               <span id="sync-status-text">Online</span>
@@ -172,9 +177,12 @@
             <div class="action-circle-icon bg-purple">👥</div>
             <span class="action-circle-label">Keluarga</span>
           </button>
-          <button type="button" class="quick-action-circle-btn" onclick="openGoogleSheetsModal()"
+          <button type="button" class="quick-action-circle-btn action-btn-sheets" onclick="openGoogleSheetsModal()"
             title="Buka Integrasi Google Sheets">
-            <div class="action-circle-icon bg-green">📊</div>
+            <div class="action-circle-icon bg-green">
+              📊
+              <span id="sheets-action-badge-dot" class="action-badge-dot"></span>
+            </div>
             <span class="action-circle-label">Sheets</span>
           </button>
         </div>
@@ -681,6 +689,10 @@
             Spreadsheet pribadi untuk akun <b>...</b> terhubung otomatis. Setiap mutasi transaksi langsung tersinkron
             rapi tanpa perlu input link manual.
           </p>
+          <button type="button" id="btn-test-webhook-sync" class="btn-test-webhook hidden"
+            onclick="testGoogleSheetsWebhook()">
+            <span>🧪 Uji Coba Kirim Data Tes ke Google Spreadsheet</span>
+          </button>
           <div class="gsheets-actions-bar">
             <button class="btn-gsheets-primary btn-pdf-action" onclick="exportPersonalPdf()"
               title="Unduh Laporan Mutasi format PDF resmi">

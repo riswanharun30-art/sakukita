@@ -1,5 +1,5 @@
 // SakuKita Service Worker - Offline Caching & PWA Ready
-const CACHE_NAME = 'sakukita-cache-v10-mobile-sheets';
+const CACHE_NAME = 'sakukita-cache-v11-sheets-indicator';
 const ASSETS = [
   './',
   './index.html',
