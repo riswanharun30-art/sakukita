@@ -1,5 +1,5 @@
 // SakuKita Service Worker - Offline Caching & PWA Ready
-const CACHE_NAME = 'sakukita-cache-v28-viewer-lockdown-alias-persist';
+const CACHE_NAME = 'sakukita-cache-v29-instant-revocation-naming-fix';
 const ASSETS = [
   './',
   './index.html',

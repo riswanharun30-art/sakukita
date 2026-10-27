@@ -447,7 +447,8 @@ function getSpaceAliases() {
 }
 
 function saveSpaceAlias(spaceId, spaceName, ownerNickname, ownerId) {
-  if (!spaceId) return;
+  // CRITICAL: NEVER save an alias for space_1! space_1 is the local owner's primary ledger!
+  if (!spaceId || spaceId === 'space_1') return;
   try {
     const aliases = getSpaceAliases();
     aliases[spaceId] = {
@@ -472,16 +473,23 @@ function removeSpaceAlias(spaceId) {
 }
 
 function applySavedSpaceAliases() {
+  // Always clean up any accidental legacy space_1 alias
+  removeSpaceAlias('space_1');
+
   const aliases = getSpaceAliases();
   if (!aliases || typeof aliases !== 'object') return;
   Object.keys(aliases).forEach(sId => {
+    // CRITICAL: NEVER touch space_1 or any local non-remote space!
+    if (sId === 'space_1') return;
     const alias = aliases[sId];
     if (!alias) return;
-    const space = spaces[sId] || Object.values(spaces).find(s => s.originalSpaceId === sId);
-    if (space) {
+
+    // Only apply alias to remote shared spaces!
+    const space = spaces[sId] || Object.values(spaces).find(s => s.isRemoteShared && s.originalSpaceId === sId);
+    if (space && space.isRemoteShared) {
       if (alias.spaceName) space.name = alias.spaceName;
       const oId = alias.ownerId || space.ownerId;
-      if (oId && users[oId]) {
+      if (oId && users[oId] && users[oId].isRemoteOwner) {
         if (!users[oId].originalName) users[oId].originalName = users[oId].name;
         if (alias.ownerNickname) users[oId].name = alias.ownerNickname;
       }
@@ -525,11 +533,29 @@ function loadData() {
     }
   });
 
+  // Self-heal local owner profile if it was mistakenly renamed to Beti by previous bug
+  const localUser = Object.values(users).find(u => !u.isRemoteOwner) || users.user_1;
+  if (localUser) {
+    if (localUser.name && localUser.name.toLowerCase().includes('beti')) {
+      localUser.name = (localUser.email && localUser.email.includes('@')) ? localUser.email.split('@')[0] : 'Riswan';
+      localUser.originalName = localUser.name;
+    }
+  }
+
+  // Self-heal spaces.space_1 name
+  if (spaces.space_1) {
+    const owner = users[spaces.space_1.ownerId] || localUser || { name: 'Riswan' };
+    let primaryOwnerName = owner.originalName || owner.name || 'Riswan';
+    if (primaryOwnerName.toLowerCase().includes('beti')) {
+      primaryOwnerName = 'Riswan';
+    }
+    spaces.space_1.name = `Buku Kas Utama (${primaryOwnerName})`;
+  }
+
   const savedUserId = localStorage.getItem('sakukita_current_user_id');
   if (savedUserId && users[savedUserId] && !users[savedUserId].isRemoteOwner) {
     activeUserId = savedUserId;
   } else {
-    const localUser = Object.values(users).find(u => !u.isRemoteOwner) || users.user_1;
     if (localUser) {
       activeUserId = localUser.id;
     } else {
@@ -999,13 +1025,25 @@ function updateSpaceSelectorUI() {
   const accessibleSpaces = getAccessibleSpacesForUser(activeUserId);
 
   accessibleSpaces.forEach(space => {
-    const isOwner = space.ownerId === activeUserId;
+    const isOwner = space.ownerId === activeUserId || !space.isRemoteShared;
     const ownerObj = users[space.ownerId] || { name: 'Pengguna' };
     const opt = document.createElement('option');
     opt.value = space.id;
-    opt.textContent = isOwner 
-      ? `${space.icon} ${space.name} (Milik Anda)` 
-      : `👁️ ${space.name} (Milik ${ownerObj.name})`;
+
+    if (isOwner) {
+      let ownerDisplayName = ownerObj.originalName || ownerObj.name || 'Riswan';
+      if (ownerDisplayName.toLowerCase().includes('beti')) {
+        ownerDisplayName = 'Riswan';
+      }
+      opt.textContent = `${space.icon || '📘'} Buku Kas Utama (${ownerDisplayName}) (Milik Anda)`;
+    } else {
+      let spaceDisplayName = space.name || 'buku kas utama';
+      // Clean any accidental (Milik ...) attached to spaceDisplayName
+      spaceDisplayName = spaceDisplayName.replace(/\s*\(Milik.*?\)/i, '').trim();
+      const ownerDisplayName = ownerObj.name || ownerObj.originalName || 'Pasangan';
+      opt.textContent = `👁️ ${spaceDisplayName} (Milik ${ownerDisplayName})`;
+    }
+
     if (space.id === activeSpaceId) opt.selected = true;
     select.appendChild(opt);
   });
@@ -2980,6 +3018,9 @@ function openCollabModal() {
               (Bisa diubah bebas, misal: "Buku Kas Kakak", "Buku Kas Istri", atau "Adik" agar mudah dikenali di daftar pilihan buku kas).
             </span>
           </div>
+          <button type="button" class="btn-toggle-access btn-revoke" onclick="handleLeaveMonitoredSpace()" style="margin-top:12px; width:100%; justify-content:center; padding:10px 14px; font-size:0.78rem; border-radius:10px; display:flex; align-items:center; gap:6px;">
+            <span>🚪</span><span>Berhenti Memantau / Hapus Buku Kas Ini</span>
+          </button>
         </div>
       </div>
     `;
@@ -3062,14 +3103,20 @@ async function handleAddCollabMember(e) {
 
 function handleRemoveCollabMember(targetUserId) {
   const currentSpace = getActiveSpace();
-  const targetUser = users[targetUserId] || { name: 'Anggota' };
+  const targetUser = users[targetUserId] || { name: 'Anggota', email: '' };
 
   if (confirm(`Apakah Anda yakin ingin mencabut izin pantau untuk ${targetUser.name}?`)) {
     if (currentSpace.allowedViewers) {
       currentSpace.allowedViewers = currentSpace.allowedViewers.filter(id => id !== targetUserId);
     }
     saveSpaces();
+
+    // 1. Broadcast space update to cloud even with empty viewers
     broadcastSpaceToCloud(currentSpace);
+
+    // 2. Publish direct SPACE_REVOKED message to space & user topics
+    publishCloudRevocation(currentSpace, targetUser, targetUserId);
+
     openCollabModal();
     renderAll();
     showLiveToast('🚫 Izin Dicabut', `Akses pantau untuk ${targetUser.name} telah dicabut.`);
@@ -3795,10 +3842,15 @@ async function parseNtfyItem(item) {
 
 async function broadcastSpaceToCloud(space) {
   if (!space || !space.id) return;
-  if (!space.allowedViewers || space.allowedViewers.length === 0) return;
   const ownerUser = users[space.ownerId] || { name: 'Pemilik', email: '' };
   const topic = space.cloudTopic || getSyncTopicForSpace(space.originalSpaceId || space.id, ownerUser.email);
   if (!space.cloudTopic) space.cloudTopic = topic;
+
+  // Compute viewer emails for cross-device verification
+  const viewerEmails = (space.allowedViewers || []).map(vid => {
+    const u = users[vid];
+    return (u && u.email) ? u.email.toLowerCase().trim() : (typeof vid === 'string' && vid.includes('@') ? vid.toLowerCase().trim() : '');
+  }).filter(Boolean);
 
   const payload = {
     action: 'SPACE_UPDATE',
@@ -3812,7 +3864,8 @@ async function broadcastSpaceToCloud(space) {
       icon: space.icon,
       cloudTopic: topic,
       budget: space.budget || 0,
-      allowedViewers: space.allowedViewers,
+      allowedViewers: space.allowedViewers || [],
+      allowedViewerEmails: viewerEmails,
       wallets: space.wallets,
       transactions: space.transactions
     }
@@ -3834,6 +3887,11 @@ async function publishCloudInvitation(space, targetEmail, targetName) {
   const cloudTopic = space.cloudTopic || getSyncTopicForSpace(space.originalSpaceId || space.id, ownerUser.email);
   if (!space.cloudTopic) space.cloudTopic = cloudTopic;
 
+  const viewerEmails = (space.allowedViewers || []).map(vid => {
+    const u = users[vid];
+    return (u && u.email) ? u.email.toLowerCase().trim() : (typeof vid === 'string' && vid.includes('@') ? vid.toLowerCase().trim() : '');
+  }).filter(Boolean);
+
   const payload = {
     action: 'SPACE_INVITE',
     timestamp: Date.now(),
@@ -3847,7 +3905,8 @@ async function publishCloudInvitation(space, targetEmail, targetName) {
       ownerName: ownerUser.name,
       icon: space.icon,
       cloudTopic: cloudTopic,
-      allowedViewers: space.allowedViewers,
+      allowedViewers: space.allowedViewers || [],
+      allowedViewerEmails: viewerEmails,
       budget: space.budget || 0,
       wallets: space.wallets,
       transactions: space.transactions
@@ -3861,6 +3920,107 @@ async function publishCloudInvitation(space, targetEmail, targetName) {
       body: JSON.stringify(payload)
     }).catch(() => {});
   } catch (e) {}
+}
+
+async function publishCloudRevocation(space, targetUser, targetUserId) {
+  if (!space) return;
+  const ownerUser = users[space.ownerId] || { name: 'Pemilik', email: '' };
+  const rawSpaceId = space.originalSpaceId || space.id;
+  const spaceCloudTopic = space.cloudTopic || getSyncTopicForSpace(rawSpaceId, ownerUser.email);
+
+  const payload = {
+    action: 'SPACE_REVOKED',
+    timestamp: Date.now(),
+    spaceId: rawSpaceId,
+    targetUserId: targetUserId || '',
+    targetEmail: (targetUser && targetUser.email ? targetUser.email.toLowerCase().trim() : ''),
+    targetName: targetUser ? targetUser.name : '',
+    ownerName: ownerUser.name,
+    ownerEmail: ownerUser.email,
+    spaceName: space.name
+  };
+
+  const jsonStr = JSON.stringify(payload);
+
+  // Send to space topic with urgent priority
+  if (spaceCloudTopic) {
+    try {
+      fetch(`https://ntfy.sh/${spaceCloudTopic}`, {
+        method: 'POST',
+        headers: { 'Title': 'Akses Pantau Dicabut', 'Priority': 'urgent' },
+        body: jsonStr
+      }).catch(() => {});
+    } catch (e) {}
+  }
+
+  // Also send directly to target viewer's private email inbox topic
+  if (targetUser && targetUser.email) {
+    const userTopic = getSyncTopicForEmail(targetUser.email);
+    if (userTopic) {
+      try {
+        fetch(`https://ntfy.sh/${userTopic}`, {
+          method: 'POST',
+          headers: { 'Title': 'Akses Pantau Dicabut', 'Priority': 'urgent' },
+          body: jsonStr
+        }).catch(() => {});
+      } catch (e) {}
+    }
+  }
+}
+
+function handleRemoteSpaceRevoked(spaceId, ownerName = 'Pemilik') {
+  if (!spaceId) return;
+  const space = spaces[spaceId];
+  if (!space) return;
+
+  const spaceName = space.name || 'Buku Kas';
+  const partnerOwnerId = space.ownerId;
+
+  // 1. Remove space aliases permanently
+  removeSpaceAlias(spaceId);
+  if (space.originalSpaceId) {
+    removeSpaceAlias(space.originalSpaceId);
+  }
+
+  // 2. Delete the remote space
+  delete spaces[spaceId];
+  saveSpaces();
+
+  // 3. Clean up partner owner user if no other spaces reference them
+  if (partnerOwnerId && (partnerOwnerId.startsWith('partner_') || (users[partnerOwnerId] && users[partnerOwnerId].isRemoteOwner))) {
+    const isStillUsed = Object.values(spaces).some(s => s.ownerId === partnerOwnerId);
+    if (!isStillUsed) {
+      delete users[partnerOwnerId];
+      saveUsers();
+    }
+  }
+
+  // 4. If current active space was revoked, switch immediately to primary local space
+  if (activeSpaceId === spaceId) {
+    const localOwner = Object.values(users).find(u => !u.isRemoteOwner) || users.user_1;
+    const localSpace = Object.values(spaces).find(s => !s.isRemoteShared && s.ownerId === (localOwner ? localOwner.id : 'user_1')) || spaces.space_1;
+    activeSpaceId = localSpace ? localSpace.id : 'space_1';
+    localStorage.setItem('sakukita_active_space_id', activeSpaceId);
+    if (localOwner) {
+      activeUserId = localOwner.id;
+      localStorage.setItem('sakukita_current_user_id', activeUserId);
+    }
+  }
+
+  // 5. Close any open collab/rename modals
+  closeModal('modal-collaboration');
+  closeModal('modal-rename-monitored');
+
+  // 6. Refresh UI
+  validateActiveSpace();
+  renderUserPills();
+  renderActiveUserProfile();
+  updateSpaceSelectorUI();
+  renderAll();
+
+  // 7. Inform user immediately via toast
+  showLiveToast('🚫 Izin Akses Dicabut', `Pemilik (${ownerName}) telah mencabut izin memantau untuk "${spaceName}". Buku kas telah dihapus otomatis dari HP Anda.`);
+  notifyOtherTabs('SPACE_REVOKED', { spaceId });
 }
 
 function generateCollabInviteUrl(memberEmail, memberName) {
@@ -4056,8 +4216,21 @@ async function checkPendingCloudInvites() {
         const item = JSON.parse(line);
         if (item.event === 'message') {
           const payload = await parseNtfyItem(item);
-          if (payload && payload.action === 'SPACE_INVITE' && payload.space) {
-            applyRemoteSpaceJoin(payload.space, 'Undangan Cloud Otomatis');
+          if (payload) {
+            if (payload.action === 'SPACE_INVITE' && payload.space) {
+              applyRemoteSpaceJoin(payload.space, 'Undangan Cloud Otomatis');
+            } else if (payload.action === 'SPACE_REVOKED') {
+              const targetSpace = Object.values(spaces).find(s => 
+                s.isRemoteShared && (
+                  s.id === payload.spaceId || 
+                  s.originalSpaceId === payload.spaceId ||
+                  (payload.ownerEmail && users[s.ownerId] && users[s.ownerId].email && users[s.ownerId].email.toLowerCase() === payload.ownerEmail.toLowerCase())
+                )
+              );
+              if (targetSpace) {
+                handleRemoteSpaceRevoked(targetSpace.id, payload.ownerName || 'Pemilik');
+              }
+            }
           }
         }
       } catch (e) {}
@@ -4069,7 +4242,7 @@ async function pollSpaceFromCloud(spaceId, force = false) {
   if (!spaceId) return;
   const currentSpace = spaces[spaceId];
   if (!currentSpace) return;
-  if (currentSpace.ownerId === activeUserId) return;
+  if (currentSpace.ownerId === activeUserId && !currentSpace.isRemoteShared) return;
 
   const topic = currentSpace.cloudTopic || getSyncTopicForSpace(currentSpace.originalSpaceId || spaceId);
   if (!topic) return;
@@ -4080,23 +4253,60 @@ async function pollSpaceFromCloud(spaceId, force = false) {
     const text = await res.text();
     const lines = text.split('\n');
     let latestUpdate = null;
+    let latestRevocation = null;
+
     for (const line of lines) {
       if (!line.trim()) continue;
       try {
         const item = JSON.parse(line);
         if (item.event === 'message') {
           const payload = await parseNtfyItem(item);
-          if (payload && payload.action === 'SPACE_UPDATE' && payload.space) {
-            if (!latestUpdate || payload.timestamp > latestUpdate.timestamp) {
-              latestUpdate = payload;
+          if (payload) {
+            if (payload.action === 'SPACE_REVOKED') {
+              if (!latestRevocation || payload.timestamp > latestRevocation.timestamp) {
+                latestRevocation = payload;
+              }
+            } else if (payload.action === 'SPACE_UPDATE' && payload.space) {
+              if (!latestUpdate || payload.timestamp > latestUpdate.timestamp) {
+                latestUpdate = payload;
+              }
             }
           }
         }
       } catch (e) {}
     }
 
+    const currentUser = getActiveUser();
+    const myEmail = (currentUser && currentUser.email ? currentUser.email.toLowerCase().trim() : '');
+
+    // Check if revocation happened after latest update, or if revocation applies to this user
+    if (latestRevocation && (!latestUpdate || latestRevocation.timestamp >= latestUpdate.timestamp)) {
+      const targetEmail = (latestRevocation.targetEmail || '').toLowerCase().trim();
+      if (!targetEmail || !myEmail || targetEmail === myEmail || latestRevocation.targetUserId === activeUserId) {
+        handleRemoteSpaceRevoked(spaceId, latestRevocation.ownerName || 'Pemilik');
+        return;
+      }
+    }
+
     if (latestUpdate && latestUpdate.space) {
       const sp = latestUpdate.space;
+
+      // Check if current user is still in allowed viewers list
+      const allowedViewers = Array.isArray(sp.allowedViewers) ? sp.allowedViewers : [];
+      const allowedEmails = Array.isArray(sp.allowedViewerEmails) ? sp.allowedViewerEmails : [];
+
+      const isStillAllowed = (
+        allowedViewers.includes(activeUserId) ||
+        (myEmail && allowedEmails.includes(myEmail)) ||
+        (myEmail && allowedViewers.some(v => typeof v === 'string' && v.toLowerCase().trim() === myEmail))
+      );
+
+      // If owner removed all viewers or removed this viewer specifically
+      if (!isStillAllowed && (allowedViewers.length === 0 || (allowedEmails.length > 0 && myEmail && !allowedEmails.includes(myEmail)))) {
+        handleRemoteSpaceRevoked(spaceId, sp.ownerName || 'Pemilik');
+        return;
+      }
+
       let changed = false;
       if (JSON.stringify(currentSpace.transactions) !== JSON.stringify(sp.transactions)) {
         currentSpace.transactions = sp.transactions;
@@ -4157,8 +4367,20 @@ function setupCloudSyncLoop() {
     });
   };
 
-  setTimeout(doSync, 2000);
-  cloudSyncTimer = setInterval(doSync, 20000);
+  setTimeout(doSync, 500);
+  cloudSyncTimer = setInterval(doSync, 5000);
+
+  if (!window._sakukitaVisibilityHooked) {
+    window._sakukitaVisibilityHooked = true;
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') {
+        doSync();
+      }
+    });
+    window.addEventListener('focus', () => {
+      doSync();
+    });
+  }
 }
 
 function manualSyncPartnerSpace(spaceId) {
@@ -4370,18 +4592,21 @@ function handleSaveRenameMonitored(e) {
   if (!currentSpace) return;
 
   const newOwnerName = document.getElementById('rename-owner-name')?.value.trim() || 'Pasangan';
-  const newSpaceName = document.getElementById('rename-space-name')?.value.trim() || `Buku Kas (${newOwnerName})`;
+  const newSpaceName = document.getElementById('rename-space-name')?.value.trim() || `buku kas utama (${newOwnerName})`;
 
   currentSpace.name = newSpaceName;
-  if (users[currentSpace.ownerId]) {
+  if (users[currentSpace.ownerId] && users[currentSpace.ownerId].isRemoteOwner) {
     users[currentSpace.ownerId].name = newOwnerName;
   }
 
-  // Save alias permanently in localStorage
-  saveSpaceAlias(targetSpaceId, newSpaceName, newOwnerName, currentSpace.ownerId);
-  if (currentSpace.originalSpaceId) {
+  // Save alias permanently in localStorage (NEVER for space_1!)
+  if (targetSpaceId !== 'space_1') {
+    saveSpaceAlias(targetSpaceId, newSpaceName, newOwnerName, currentSpace.ownerId);
+  }
+  if (currentSpace.originalSpaceId && currentSpace.originalSpaceId !== 'space_1' && currentSpace.originalSpaceId !== targetSpaceId) {
     saveSpaceAlias(currentSpace.originalSpaceId, newSpaceName, newOwnerName, currentSpace.ownerId);
   }
+  removeSpaceAlias('space_1');
 
   saveSpaces();
   saveUsers();
@@ -4399,19 +4624,8 @@ function handleLeaveMonitoredSpace() {
   if (!currentSpace) return;
 
   if (confirm(`Apakah Anda yakin ingin berhenti memantau "${currentSpace.name}"?\nBuku kas ini akan dihapus dari daftar buku kas di HP Anda.`)) {
-    removeSpaceAlias(targetSpaceId);
-    if (currentSpace.originalSpaceId) removeSpaceAlias(currentSpace.originalSpaceId);
-    delete spaces[targetSpaceId];
-    saveSpaces();
-    activeSpaceId = 'space_1';
-    localStorage.setItem('sakukita_active_space_id', 'space_1');
-    validateActiveSpace();
-    renderAll();
-    updateSpaceSelectorUI();
-    renderUserPills();
-    closeModal('modal-rename-monitored');
-    closeModal('modal-collaboration');
-    showLiveToast('🚪 Berhenti Memantau', `Buku kas "${currentSpace.name}" telah dihapus dari HP Anda.`);
+    const ownerName = (users[currentSpace.ownerId] && users[currentSpace.ownerId].name) || 'Pemilik';
+    handleRemoteSpaceRevoked(targetSpaceId, ownerName);
   }
 }
 
