@@ -1,0 +1,981 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SakuKita - Buku Kas & Keuangan Kolaboratif Multi-Akun</title>
+  <meta name="description" content="Aplikasi pencatatan keuangan bersama dan keluarga kolaboratif. Dilengkapi izin pantau (read-only), auto-sync Google Sheets, dan pemantau limit backend gratis.">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/png" href="icon-192.png">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <meta name="theme-color" content="#090d16">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="SakuKita">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Container Desktop Frame / Phone Wrapper -->
+  <div class="app-layout">
+    <!-- PWA 1-Click Install Banner (Siap Pakai Langsung di HP) -->
+    <div id="pwa-install-banner" class="pwa-install-banner">
+      <div class="pwa-banner-left">
+        <img src="icon-192.png" width="34" height="34" class="pwa-app-logo" alt="SakuKita Icon">
+        <div class="pwa-text-box">
+          <strong class="pwa-title">Pasang Aplikasi SakuKita</strong>
+          <span class="pwa-sub">Siap pakai di HP tanpa tindakan tambahan</span>
+        </div>
+      </div>
+      <div class="pwa-banner-actions">
+        <button id="btn-pwa-install" class="btn-install-app" onclick="triggerPwaInstall()">
+          <span>📲 Pasang Sekarang</span>
+        </button>
+        <button class="btn-pwa-guide" onclick="openInstallGuideModal()" title="Panduan Pasang di HP">
+          <span>ℹ️ Panduan</span>
+        </button>
+        <a href="landing.html" class="btn-pwa-guide btn-pwa-web-btn" title="Lihat Website Penjelasan & Download APK">
+          <span>🌐 Website</span>
+        </a>
+      </div>
+    </div>
+
+    <!-- Top Bar Navigation -->
+    <header class="app-header">
+      <div class="brand-row">
+        <div class="brand">
+          <div class="brand-icon">
+            <img src="icon-192.png" width="28" height="28" style="border-radius:7px; object-fit:cover;" alt="SakuKita Logo">
+          </div>
+          <div>
+            <h1 class="brand-title">SakuKita</h1>
+            <span class="brand-tagline">Keuangan Kolaboratif Multi-Akun</span>
+          </div>
+        </div>
+
+        <!-- Quick Status Pills: Website, Backend Quota & Google Sheets -->
+        <div class="header-quick-actions">
+          <a href="landing.html" class="badge-pill website-pill" title="Website Resmi & Download APK">
+            <span>🌐 Website</span>
+          </a>
+          <button id="btn-quick-quota" class="badge-pill quota-pill" title="Pantau Kuota Backend Cloud Free Tier" onclick="openQuotaModal()">
+            <span class="pulse-dot green-dot"></span>
+            <span id="quota-quick-label">Limit: 100% Aman</span>
+          </button>
+          <button id="btn-quick-sheets" class="badge-pill sheets-pill" title="Pengaturan & Status Auto-Sync Google Sheets" onclick="openGoogleSheetsModal()">
+            <span class="sheets-icon">📊</span>
+            <span id="sheets-quick-label">Sheets Aktif</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- User Profile & Google Account Bar -->
+      <div class="user-switch-bar">
+        <div class="user-switch-header">
+          <div class="active-google-pill-wrap" onclick="openGoogleLoginModal()" title="Klik untuk ganti atau pilih akun Google">
+            <span class="google-g-mini">
+              <svg width="14" height="14" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/></svg>
+            </span>
+            <span id="header-google-email">Memuat akun Google...</span>
+            <span class="google-dropdown-arrow">▼</span>
+          </div>
+
+          <div class="user-header-right-btns">
+            <button class="btn-edit-profile" title="Ubah Nama Tampilan & Unggah Foto Profil" onclick="openEditProfileModal()">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+              <span>Ubah Nama & Foto</span>
+            </button>
+            <button class="btn-switch-account" title="Pilih / Ganti Akun Google" onclick="openGoogleLoginModal()">
+              <span>Ganti Akun</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="user-pill-selector" id="user-pill-container">
+          <!-- Populated dynamically via JS with real user names & avatars -->
+        </div>
+
+        <div class="user-profile-subdetail" id="user-profile-subdetail">
+          <!-- Active user email & Google account badge -->
+        </div>
+
+        <button id="btn-open-partner-window" class="btn-dual-window" title="Buka jendela baru untuk simulasi dua anggota keluarga bersamaan" onclick="openDualWindow()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+          Buka Tab Baru (Simulasi Multi-Pengguna)
+        </button>
+      </div>
+
+      <!-- Ruang Kas / Space Selector (Role & Permission aware) -->
+      <div class="space-selector-bar" id="space-selector-bar">
+        <div class="space-info">
+          <span class="space-label">Buku Kas:</span>
+          <select id="active-space-select" class="space-dropdown" onchange="handleSpaceChange(this.value)">
+            <!-- Populated via JS based on user permissions -->
+          </select>
+        </div>
+        <button id="btn-collaboration" class="btn-collab" onclick="openCollabModal()">
+          <span id="collab-icon">🤝</span>
+          <span id="collab-btn-text">Kelola Izin Pantau</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="main-container">
+      <!-- Read-Only Viewer Warning Banner (Shows when user is a Viewer) -->
+      <div id="viewer-banner" class="viewer-mode-banner hidden">
+        <div class="viewer-mode-left">
+          <span class="viewer-banner-icon">👁️</span>
+          <div>
+            <div class="viewer-banner-title">Mode Hanya Pantau (Read-Only)</div>
+            <div class="viewer-banner-desc" id="viewer-banner-desc">
+              Buku kas ini milik <strong>...</strong>. Anda memiliki izin memantau keuangan tanpa hak merubah atau menghapus data.
+            </div>
+          </div>
+        </div>
+        <span class="viewer-badge-tag">Hanya Pantau</span>
+      </div>
+
+      <!-- Balance Overview Card -->
+      <section class="card balance-card">
+        <div class="balance-header">
+          <div>
+            <div class="card-caption-row">
+              <span class="card-caption" id="balance-space-owner-label">Total Saldo Buku Kas</span>
+              <span id="access-role-tag" class="role-badge role-owner">👑 Pemilik</span>
+            </div>
+            <h2 id="total-balance" class="balance-amount">Rp 0</h2>
+          </div>
+          <div class="status-badge" id="sync-status">
+            <span class="pulse-dot"></span>
+            <span id="sync-status-text">Sinkron Realtime</span>
+          </div>
+        </div>
+
+        <div class="balance-grid">
+          <div class="stat-box income-box">
+            <div class="stat-icon income-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+            </div>
+            <div>
+              <span class="stat-label">Pemasukan Bulan Ini</span>
+              <p id="total-income" class="stat-val">+Rp 0</p>
+            </div>
+          </div>
+          <div class="stat-box expense-box">
+            <div class="stat-icon expense-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/></svg>
+            </div>
+            <div>
+              <span class="stat-label">Pengeluaran Bulan Ini</span>
+              <p id="total-expense" class="stat-val">-Rp 0</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Monthly Budget Progress Bar -->
+        <div class="budget-section">
+          <div class="budget-info">
+            <span>Anggaran Bulanan (Target: <b id="budget-limit-text">Rp 6.000.000</b>)</span>
+            <span id="budget-percentage" class="budget-pct">0%</span>
+          </div>
+          <div class="progress-bar-bg">
+            <div id="budget-progress-fill" class="progress-bar-fill" style="width: 0%;"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Wallets Horizontal Carousel -->
+      <section class="wallets-section">
+        <div class="section-title-row">
+          <h3 class="section-title">Kantong / Dompet Rekening</h3>
+          <span id="btn-add-wallet-action" class="section-action" onclick="openAddWalletModal()">+ Tambah Dompet</span>
+        </div>
+        <div class="wallet-scroll" id="wallets-container">
+          <!-- Dynamically populated -->
+        </div>
+      </section>
+
+      <!-- Transactions & Feed Section -->
+      <section class="transactions-section">
+        <div class="section-title-row">
+          <div>
+            <h3 class="section-title">Aktivitas & Riwayat Transaksi</h3>
+            <span class="section-subtitle" id="feed-subtitle">Transparan antar anggota yang terhubung</span>
+          </div>
+          <div class="tx-header-actions">
+            <button class="btn-quick-pdf" onclick="exportPersonalPdf()" title="Unduh Rekening Koran (PDF) Resmi">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+              <span>Cetak PDF</span>
+            </button>
+            <div class="filter-pills" id="feed-filter">
+              <!-- Populated via JS based on active space members -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Live Toast Notification container -->
+        <div id="live-alert" class="live-alert hidden">
+          <div class="live-alert-icon">⚡</div>
+          <div class="live-alert-content">
+            <strong id="alert-title">Aktivitas Baru</strong>
+            <p id="alert-desc">Seseorang baru saja memperbarui data</p>
+          </div>
+        </div>
+
+        <!-- Transaction List -->
+        <div class="transaction-list" id="transaction-list">
+          <!-- Dynamically generated transactions -->
+        </div>
+      </section>
+    </main>
+
+    <!-- Bottom Floating Action Bar -->
+    <div class="bottom-action-bar">
+      <button class="btn-database-info" onclick="openQuotaModal()" title="Pantau Kuota Backend">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/><ellipse cx="12" cy="5" rx="9" ry="3"/></svg>
+        <span>Limit Kuota</span>
+      </button>
+
+      <button class="btn-gsheets-nav" onclick="openGoogleSheetsModal()" title="Buka Integrasi Google Sheets">
+        <span class="sheets-logo-icon">📊</span>
+        <span>Google Sheets</span>
+      </button>
+
+      <button id="btn-main-add-tx" class="btn-add-transaction" onclick="handleNewTransactionClick()">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        <span id="btn-add-tx-text">Catat Transaksi</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Modal 1: Tambah Transaksi -->
+  <div id="modal-transaction" class="modal-backdrop hidden" onclick="handleBackdropClick(event, 'modal-transaction')">
+    <div class="modal-sheet">
+      <div class="modal-handle"></div>
+      <div class="modal-header">
+        <h3 id="modal-tx-title">Catat Transaksi Baru</h3>
+        <button class="modal-close" onclick="closeModal('modal-transaction')">&times;</button>
+      </div>
+
+      <!-- Type Switcher: Pengeluaran vs Pemasukan -->
+      <div class="type-switcher">
+        <button type="button" id="tab-expense" class="type-btn active expense" onclick="setTransactionType('EXPENSE')">
+          Pengeluaran (-)
+        </button>
+        <button type="button" id="tab-income" class="type-btn income" onclick="setTransactionType('INCOME')">
+          Pemasukan (+)
+        </button>
+      </div>
+
+      <form id="form-transaction" onsubmit="handleSaveTransaction(event)">
+        <!-- Amount Input -->
+        <div class="form-group">
+          <label for="tx-amount">Nominal Uang</label>
+          <div class="currency-input-wrapper">
+            <span class="currency-prefix">Rp</span>
+            <input type="text" id="tx-amount" class="form-control amount-field" placeholder="0" required inputmode="numeric" oninput="formatCurrencyInput(this)">
+          </div>
+        </div>
+
+        <!-- Category Grid Selector -->
+        <div class="form-group">
+          <label>Kategori</label>
+          <div class="category-grid" id="category-picker">
+            <!-- Dynamically populated based on type -->
+          </div>
+          <input type="hidden" id="selected-category" required>
+        </div>
+
+        <!-- Wallet Selector -->
+        <div class="form-group">
+          <label for="tx-wallet">Pilih Dompet / Rekening</label>
+          <select id="tx-wallet" class="form-control" required>
+            <!-- Populated via JS -->
+          </select>
+        </div>
+
+        <!-- Description Note -->
+        <div class="form-group">
+          <label for="tx-note">Catatan / Keterangan</label>
+          <input type="text" id="tx-note" class="form-control" placeholder="Contoh: Belanja bahan dapur, bayar internet, tagihan listrik..." required>
+        </div>
+
+        <!-- Who is inputting (Google Account Profile transparency) -->
+        <div class="form-group creator-preview-box">
+          <span class="creator-label">Akan dicatat atas nama akun:</span>
+          <div class="creator-badge" id="tx-creator-badge">
+            <span id="tx-creator-avatar">👨‍💼</span>
+            <div class="creator-details">
+              <span id="tx-creator-name" class="creator-name-bold">Ahmad Pratama</span>
+              <span id="tx-creator-email" class="creator-email-sub">ahmad.pratama@gmail.com</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Auto-Sync Google Sheets Notice -->
+        <div class="sheets-autosync-note">
+          <span class="sheets-badge-icon">📊</span>
+          <span>Transaksi ini akan otomatis ter-backup ke Google Spreadsheet pribadi Anda.</span>
+        </div>
+
+        <button type="submit" class="btn-submit-tx">
+          Simpan Transaksi
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal 2: Tambah Dompet Baru -->
+  <div id="modal-wallet" class="modal-backdrop hidden" onclick="handleBackdropClick(event, 'modal-wallet')">
+    <div class="modal-sheet">
+      <div class="modal-handle"></div>
+      <div class="modal-header">
+        <h3>Tambah Kantong / Dompet</h3>
+        <button class="modal-close" onclick="closeModal('modal-wallet')">&times;</button>
+      </div>
+      <form id="form-wallet" onsubmit="handleSaveWallet(event)">
+        <div class="form-group">
+          <label for="wallet-name">Nama Dompet / Rekening</label>
+          <input type="text" id="wallet-name" class="form-control" placeholder="Contoh: BCA Tabungan, Rekening Mandiri, Kas Tunai" required>
+        </div>
+        <div class="form-group">
+          <label for="wallet-balance">Saldo Awal</label>
+          <div class="currency-input-wrapper">
+            <span class="currency-prefix">Rp</span>
+            <input type="text" id="wallet-balance" class="form-control" placeholder="0" required oninput="formatCurrencyInput(this)">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Warna Tema Dompet</label>
+          <div class="color-picker-row">
+            <label class="color-radio"><input type="radio" name="wallet_color" value="#3b82f6" checked><span style="background: #3b82f6;"></span></label>
+            <label class="color-radio"><input type="radio" name="wallet_color" value="#10b981"><span style="background: #10b981;"></span></label>
+            <label class="color-radio"><input type="radio" name="wallet_color" value="#8b5cf6"><span style="background: #8b5cf6;"></span></label>
+            <label class="color-radio"><input type="radio" name="wallet_color" value="#f59e0b"><span style="background: #f59e0b;"></span></label>
+            <label class="color-radio"><input type="radio" name="wallet_color" value="#ec4899"><span style="background: #ec4899;"></span></label>
+            <label class="color-radio"><input type="radio" name="wallet_color" value="#06b6d4"><span style="background: #06b6d4;"></span></label>
+          </div>
+        </div>
+        <button type="submit" class="btn-submit-tx">Tambah Dompet</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal 3: Hub Integrasi & Auto-Sync Google Sheets -->
+  <div id="modal-sheets" class="modal-backdrop hidden" onclick="handleBackdropClick(event, 'modal-sheets')">
+    <div class="modal-sheet modal-large">
+      <div class="modal-handle"></div>
+      <div class="modal-header">
+        <div class="modal-header-title-row">
+          <span class="gsheets-header-icon">📊</span>
+          <div>
+            <h3 id="gsheets-modal-title">Google Spreadsheet Pribadi</h3>
+            <span class="modal-header-sub" id="gsheets-modal-user-subtitle">Spreadsheet khusus akun: ...</span>
+          </div>
+        </div>
+        <button class="modal-close" onclick="closeModal('modal-sheets')">&times;</button>
+      </div>
+
+      <div class="sheets-modal-content">
+        <!-- Isolation & Privacy Guarantee Card -->
+        <div class="gsheets-isolation-banner">
+          <span class="isolation-icon">🔒</span>
+          <div class="isolation-text">
+            <strong>Terpisah & Terisolasi Penuh per Akun:</strong>
+            <p>File spreadsheet ini <b>khusus untuk akun <span id="gsheets-banner-user">...</span></b>. Ketika Anda mengunduh CSV atau melakukan auto-sync, <b>HANYA data transaksi pribadi milik akun ini</b> yang dimasukkan. Data dari akun lain tidak akan pernah bercampur.</p>
+          </div>
+        </div>
+
+        <!-- Status & Auto Connection Card -->
+        <div class="gsheets-status-card">
+          <div class="gsheets-status-top">
+            <div class="gsheets-status-info">
+              <span class="gsheets-status-dot"></span>
+              <strong>Status: Terhubung Otomatis ke Google Drive</strong>
+            </div>
+            <span class="gsheets-badge-live">Otomatis Aktif</span>
+          </div>
+          <p class="gsheets-status-desc" id="gsheets-status-desc-text">
+            Spreadsheet pribadi untuk akun <b>...</b> terhubung otomatis. Setiap mutasi transaksi langsung tersinkron rapi tanpa perlu input link manual.
+          </p>
+          <div class="gsheets-actions-bar">
+            <button class="btn-gsheets-primary btn-pdf-action" onclick="exportPersonalPdf()" title="Unduh Laporan Mutasi format PDF resmi">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+              <span>Unduh E-Statement (PDF Bank)</span>
+            </button>
+            <button class="btn-gsheets-secondary" onclick="exportPersonalCsv()" title="Unduh data dalam format CSV / Excel">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              <span id="btn-export-personal-text">Unduh Mutasi (CSV)</span>
+            </button>
+            <a id="btn-open-spreadsheet-link" href="#" target="_blank" class="btn-gsheets-secondary" onclick="handleAutoSheetOpen(event)">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+              <span>Buka Google Sheets ↗</span>
+            </a>
+          </div>
+        </div>
+
+        <!-- Automatic Google Drive Details Card -->
+        <div class="settings-block auto-drive-card">
+          <div class="auto-drive-header">
+            <span class="auto-drive-icon">📁</span>
+            <div>
+              <h4 class="settings-block-title" style="margin-bottom:2px">Penyimpanan Otomatis Google Drive</h4>
+              <span class="field-hint" style="margin-top:0">Tersimpan di Google Drive pribadi akun: <b id="auto-drive-email" style="color:#60a5fa">...</b></span>
+            </div>
+          </div>
+          <div class="auto-drive-meta-rows">
+            <div class="drive-meta-item">
+              <span>Nama Dokumen:</span>
+              <strong id="auto-drive-docname">SakuKita - Mutasi Keuangan Pribadi</strong>
+            </div>
+            <div class="drive-meta-item">
+              <span>Sifat Data:</span>
+              <span class="badge-private-pill">100% Privat (Hanya Anda)</span>
+            </div>
+          </div>
+          <button type="button" class="btn-create-sheet-now" onclick="createSpreadsheetInGoogleDrive()">
+            <span>⚡ Buat / Buka Otomatis Lembar Kerja di Google Drive Saya</span>
+          </button>
+        </div>
+
+        <!-- Collapsible Custom URL / Webhook Settings (Optional) -->
+        <details class="settings-block custom-settings-accordion">
+          <summary class="accordion-summary">
+            <span>⚙️ Pengaturan Lanjutan: URL Kustom / Webhook (Opsional)</span>
+            <span class="accordion-arrow">▼</span>
+          </summary>
+          <form id="form-sheets-config" onsubmit="handleSaveSheetsConfig(event)" style="margin-top: 14px;">
+            <div class="form-group">
+              <label for="cfg-sheet-url">URL Kustom Google Spreadsheet (Jika punya file sendiri):</label>
+              <input type="url" id="cfg-sheet-url" class="form-control" placeholder="https://docs.google.com/spreadsheets/d/...">
+            </div>
+
+            <div class="form-group">
+              <label for="cfg-webhook-url">URL Webhook Google Apps Script (Opsional):</label>
+              <input type="url" id="cfg-webhook-url" class="form-control" placeholder="https://script.google.com/macros/s/.../exec">
+            </div>
+
+            <div class="toggle-row">
+              <div>
+                <strong>Auto-Sync Saat Ada Aktivitas</strong>
+                <p>Kirim update seketika ke Google Sheets setiap kali transaksi dicatat atau dihapus.</p>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="cfg-autosync-toggle" checked>
+                <span class="slider"></span>
+              </label>
+            </div>
+
+            <button type="submit" class="btn-save-settings">Simpan Pengaturan Kustom</button>
+          </form>
+        </details>
+
+        <!-- Live Synced Data Preview (Google Sheets Table Look) -->
+        <div class="settings-block">
+          <div class="sheets-preview-header">
+            <h4 class="settings-block-title">Pratinjau Data Ter-Sync Terbaru (Format Kolom Spreadsheet)</h4>
+            <span class="preview-count-tag" id="preview-row-count">0 Baris Terdata</span>
+          </div>
+          <div class="sheets-table-wrapper">
+            <table class="sheets-table" id="sheets-preview-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Waktu</th>
+                  <th>Nama Akun</th>
+                  <th>Email Google</th>
+                  <th>Tipe</th>
+                  <th>Kategori</th>
+                  <th>Nominal</th>
+                  <th>Dompet</th>
+                  <th>Keterangan</th>
+                </tr>
+              </thead>
+              <tbody id="sheets-preview-tbody">
+                <!-- Populated dynamically -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Free Google Apps Script Template Instructions -->
+        <div class="settings-block">
+          <h4 class="settings-block-title">Script Gratis Google Apps Script (1-Click Setup)</h4>
+          <p class="script-instruction-text">
+            Ingin menghubungkan Google Spreadsheet Anda secara langsung? Buka Google Sheets Anda > menu <b>Ekstensi</b> > <b>Apps Script</b>, lalu tempel kode berikut dan klik <b>Deploy as Web App</b>:
+          </p>
+          <div class="code-block-wrapper">
+            <pre><code id="apps-script-code">function doPost(e) {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  var data = JSON.parse(e.postData.contents);
+  // Tambah baris otomatis di Google Sheets
+  sheet.appendRow([
+    new Date(),
+    data.userName,
+    data.userEmail,
+    data.spaceName,
+    data.type === 'INCOME' ? 'Pemasukan (+)' : 'Pengeluaran (-)',
+    data.category,
+    data.amount,
+    data.walletName,
+    data.note
+  ]);
+  return ContentService.createTextOutput(JSON.stringify({ status: "success" }))
+    .setMimeType(ContentService.MimeType.JSON);
+}</code></pre>
+            <button class="btn-copy-code" onclick="copyAppsScriptCode()">Salin Kode Apps Script</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 4: Pantau Limit Backend & Estimasi Penggunaan Multi-Akun (>5 Orang) -->
+  <div id="modal-quota" class="modal-backdrop hidden" onclick="handleBackdropClick(event, 'modal-quota')">
+    <div class="modal-sheet modal-large">
+      <div class="modal-handle"></div>
+      <div class="modal-header">
+        <div class="modal-header-title-row">
+          <span class="quota-header-icon">⚡</span>
+          <div>
+            <h3>Pemantau Limit Backend Cloud (Free Tier)</h3>
+            <span class="modal-header-sub">Kapasitas aman gratis selamanya untuk 5+ pengguna</span>
+          </div>
+        </div>
+        <button class="modal-close" onclick="closeModal('modal-quota')">&times;</button>
+      </div>
+
+      <div class="quota-modal-content">
+        <!-- Safety Summary Card -->
+        <div class="quota-summary-banner">
+          <div class="summary-icon">🛡️</div>
+          <div>
+            <strong class="summary-title">Status Kuota: Sangat Aman (99.6% Kuota Bebas Tersedia)</strong>
+            <p class="summary-desc">
+              Aplikasi ini dirancang ultra-hemat bandwidth & storage. Dihitung untuk pemakaian 5-10 anggota keluarga aktif, free tier tidak akan pernah habis.
+            </p>
+          </div>
+        </div>
+
+        <!-- Metric Grid -->
+        <div class="quota-meters-grid">
+          <!-- Metric 1: Database Storage -->
+          <div class="quota-meter-card">
+            <div class="meter-header">
+              <span class="meter-title">Penyimpanan Database (Cloud DB)</span>
+              <span class="meter-badge green-badge">Sangat Lapang</span>
+            </div>
+            <div class="meter-values">
+              <span class="meter-val-large" id="quota-storage-used">~310 KB</span>
+              <span class="meter-val-limit">dari Kuota 500 MB (Gratis)</span>
+            </div>
+            <div class="meter-progress-track">
+              <div class="meter-progress-fill" id="quota-storage-bar" style="width: 0.1%;"></div>
+            </div>
+            <span class="meter-detail-sub">Sisa ruang: <b>499.69 MB</b> (Cukup untuk >400.000 transaksi)</span>
+          </div>
+
+          <!-- Metric 2: Monthly Transaction Rows -->
+          <div class="quota-meter-card">
+            <div class="meter-header">
+              <span class="meter-title">Batas Baris Transaksi Bulanan</span>
+              <span class="meter-badge green-badge">0.3% Terpakai</span>
+            </div>
+            <div class="meter-values">
+              <span class="meter-val-large" id="quota-rows-used">148 Baris</span>
+              <span class="meter-val-limit">dari Limit 50.000 Baris/Bulan</span>
+            </div>
+            <div class="meter-progress-track">
+              <div class="meter-progress-fill" id="quota-rows-bar" style="width: 0.3%;"></div>
+            </div>
+            <span class="meter-detail-sub">Sisa kuota bulan ini: <b id="quota-rows-remaining">49.852 baris</b></span>
+          </div>
+
+          <!-- Metric 3: Concurrent Active Users -->
+          <div class="quota-meter-card">
+            <div class="meter-header">
+              <span class="meter-title">Koneksi Realtime Bersamaan</span>
+              <span class="meter-badge blue-badge">Optimal</span>
+            </div>
+            <div class="meter-values">
+              <span class="meter-val-large" id="quota-users-active">3 Pengguna</span>
+              <span class="meter-val-limit">Batas Maks: 20 User Bersamaan</span>
+            </div>
+            <div class="meter-progress-track">
+              <div class="meter-progress-fill" style="width: 15%;"></div>
+            </div>
+            <span class="meter-detail-sub">Keluarga Anda (Saya, Istri, Kakak, dll.) dapat aktif bersamaan tanpa lag.</span>
+          </div>
+
+          <!-- Metric 4: Bandwidth Egress -->
+          <div class="quota-meter-card">
+            <div class="meter-header">
+              <span class="meter-title">Transfer Bandwidth Bulanan</span>
+              <span class="meter-badge green-badge">1.1% Terpakai</span>
+            </div>
+            <div class="meter-values">
+              <span class="meter-val-large">22.4 MB</span>
+              <span class="meter-val-limit">dari Kuota 2.0 GB / Bulan</span>
+            </div>
+            <div class="meter-progress-track">
+              <div class="meter-progress-fill" style="width: 1.1%;"></div>
+            </div>
+            <span class="meter-detail-sub">Sisa transfer data: <b>1.97 GB</b></span>
+          </div>
+        </div>
+
+        <!-- Simulation for 5+ Family Members -->
+        <div class="settings-block">
+          <h4 class="settings-block-title">Kalkulator Estimasi Jika Dipakai >5 Pengguna</h4>
+          <div class="calc-explanation-box">
+            <div class="calc-row">
+              <span>Jumlah Pengguna Keluarga:</span>
+              <b>5 s/d 10 Orang</b>
+            </div>
+            <div class="calc-row">
+              <span>Estimasi Transaksi Harian:</span>
+              <b>~15 transaksi / orang / hari (450 tx/bln)</b>
+            </div>
+            <div class="calc-row">
+              <span>Total Transaksi 1 Bulan:</span>
+              <b>~4.500 transaksi per bulan</b>
+            </div>
+            <div class="calc-row highlight">
+              <span>Persentase Limit Free Tier yang Terpakai:</span>
+              <b class="text-green">Hanya 9% dari kuota gratis 50.000 baris!</b>
+            </div>
+          </div>
+          <p class="calc-conclusion">
+            💡 <b>Kesimpulan:</b> Pemakaian 5 sampai 10 orang sangat aman 100% di backend free tier tanpa perlu upgrade berbayar. Ditambah lagi dengan adanya <b>Auto-Sync Google Spreadsheet</b>, Anda memiliki salinan permanen tanpa batas di Google Drive Anda.
+          </p>
+        </div>
+
+        <!-- Database Schema SQL Quick View (Supabase Ready) -->
+        <div class="settings-block">
+          <div class="sql-toggle-row">
+            <h4 class="settings-block-title">Skema Database Cloud (Supabase Multi-User)</h4>
+            <button class="btn-copy-code" onclick="copySqlCode()">Salin SQL</button>
+          </div>
+          <div class="code-block-wrapper">
+            <pre><code id="sql-script-code">-- SKEMA SAKUKITA MULTI-USER & GOOGLE PROFILE
+CREATE TABLE users (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  google_name TEXT NOT NULL,
+  google_email TEXT UNIQUE NOT NULL,
+  avatar TEXT DEFAULT '👤',
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE TABLE spaces (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  name TEXT NOT NULL,
+  owner_id UUID REFERENCES users(id),
+  budget NUMERIC DEFAULT 6000000,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- HAK AKSES HANYA PANTAU (VIEWER PERMISSIONS)
+CREATE TABLE space_permissions (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  space_id UUID REFERENCES spaces(id) ON DELETE CASCADE,
+  user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+  role TEXT CHECK (role IN ('VIEWER')), -- HANYA BISA MEMANTAU!
+  UNIQUE(space_id, user_id)
+);
+
+CREATE TABLE transactions (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  space_id UUID REFERENCES spaces(id) ON DELETE CASCADE,
+  created_by_user_id UUID REFERENCES users(id),
+  amount NUMERIC NOT NULL,
+  type TEXT CHECK (type IN ('INCOME', 'EXPENSE')),
+  category TEXT NOT NULL,
+  note TEXT,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- REALTIME SYNC UNTUK SELURUH HP KELUARGA
+ALTER PUBLICATION supabase_realtime ADD TABLE transactions;
+ALTER PUBLICATION supabase_realtime ADD TABLE spaces;</code></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 5: Izin Kolaborasi & Hak Akses Pantau (Viewer-Only Management) -->
+  <div id="modal-collaboration" class="modal-backdrop hidden" onclick="handleBackdropClick(event, 'modal-collaboration')">
+    <div class="modal-sheet">
+      <div class="modal-handle"></div>
+      <div class="modal-header">
+        <div class="modal-header-title-row">
+          <span class="collab-header-icon">🤝</span>
+          <div>
+            <h3>Izin Akses & Kolaborasi</h3>
+            <span class="modal-header-sub">Pengaturan Hak Pantau (Read-Only)</span>
+          </div>
+        </div>
+        <button class="modal-close" onclick="closeModal('modal-collaboration')">&times;</button>
+      </div>
+
+      <div id="collab-content-area" class="collab-modal-content">
+        <!-- Rendered dynamically via JS based on active user and active space -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 6: Ubah Profil, Rename & Upload Foto Profil -->
+  <div id="modal-profile" class="modal-backdrop hidden" onclick="handleBackdropClick(event, 'modal-profile')">
+    <div class="modal-sheet">
+      <div class="modal-handle"></div>
+      <div class="modal-header">
+        <div class="modal-header-title-row">
+          <span class="quota-header-icon">👤</span>
+          <div>
+            <h3>Ubah Nama & Foto Profil</h3>
+            <span class="modal-header-sub">Sesuaikan identitas tampilan Anda di aplikasi dan mutasi keuangan</span>
+          </div>
+        </div>
+        <button class="modal-close" onclick="closeModal('modal-profile')">&times;</button>
+      </div>
+
+      <form id="form-edit-profile" onsubmit="handleSaveProfile(event)">
+        <!-- Photo Uploader Section -->
+        <div class="profile-photo-uploader-box">
+          <div class="profile-avatar-large" id="profile-avatar-preview">
+            <span id="preview-avatar-content">👤</span>
+          </div>
+          <div class="profile-photo-actions">
+            <button type="button" class="btn-upload-photo" onclick="triggerPhotoUpload()">
+              <span>📷 Unggah Foto dari Galeri / Kamera</span>
+            </button>
+            <input type="file" id="edit-profile-photo-input" accept="image/*" style="display:none;" onchange="handleProfilePhotoSelected(event)">
+            <button type="button" id="btn-remove-photo" class="btn-remove-photo hidden" onclick="removeProfilePhoto()">
+              <span>Hapus Foto (Gunakan Emoji)</span>
+            </button>
+            <span class="field-hint">Foto akan otomatis disesuaikan secara rapi di avatar profil, riwayat mutasi, dan laporan PDF.</span>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="edit-profile-name">Nama Tampilan di Aplikasi (Bisa Rename Bebas):</label>
+          <input type="text" id="edit-profile-name" class="form-control" placeholder="Contoh: Ayah / Bunda / Mas Ahmad" required>
+          <span class="field-hint">Anda bebas merename nama ini agar lebih akrab bagi keluarga, meskipun nama asli di akun Google berbeda.</span>
+        </div>
+
+        <div class="form-group">
+          <label for="edit-profile-email">Email Akun Google (Gmail):</label>
+          <input type="email" id="edit-profile-email" class="form-control" placeholder="nama@gmail.com" required>
+          <span class="field-hint">Email ini digunakan untuk menghubungkan Google Drive pribadi Anda dan hak izin pantau keluarga.</span>
+        </div>
+
+        <div class="form-group">
+          <label>Pilih Emoji Alternatif (Jika tidak memakai foto):</label>
+          <div class="avatar-picker-row">
+            <label class="avatar-radio"><input type="radio" name="profile_avatar" value="👨‍💼"><span class="avatar-bubble">👨‍💼</span></label>
+            <label class="avatar-radio"><input type="radio" name="profile_avatar" value="👩‍💼"><span class="avatar-bubble">👩‍💼</span></label>
+            <label class="avatar-radio"><input type="radio" name="profile_avatar" value="🧑‍💻"><span class="avatar-bubble">🧑‍💻</span></label>
+            <label class="avatar-radio"><input type="radio" name="profile_avatar" value="👨‍👩‍👧"><span class="avatar-bubble">👨‍👩‍👧</span></label>
+            <label class="avatar-radio"><input type="radio" name="profile_avatar" value="🌟"><span class="avatar-bubble">🌟</span></label>
+            <label class="avatar-radio"><input type="radio" name="profile_avatar" value="👤"><span class="avatar-bubble">👤</span></label>
+          </div>
+        </div>
+
+        <div class="modal-form-actions">
+          <button type="button" class="btn-cancel" onclick="closeModal('modal-profile')">Batal</button>
+          <button type="submit" class="btn-submit-tx">Simpan Perubahan</button>
+        </div>
+      </form>
+
+      <!-- Logout / Switch Google Account Button -->
+      <div class="auth-logout-block">
+        <button type="button" class="btn-logout-google" onclick="handleGoogleLogout()">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          <span>Keluar / Ganti Akun Google Lain</span>
+        </button>
+      </div>
+
+      <!-- Data Reset & Demo Manager -->
+      <div class="data-manager-card">
+        <div class="data-manager-header">
+          <span class="data-mgr-icon">⚙️</span>
+          <div>
+            <strong class="data-manager-title">Kelola Data Buku Kas</strong>
+            <p class="data-manager-desc">Mulai bersih dari nol rupiah atau coba fitur kolaborasi dengan data simulasi keluarga:</p>
+          </div>
+        </div>
+        <div class="data-manager-btns">
+          <button type="button" class="btn-reset-clean" onclick="confirmResetAllData()">
+            <span>🗑️ Kosongkan Seluruh Data (Mulai dari Nol)</span>
+          </button>
+          <button type="button" class="btn-load-demo" onclick="confirmLoadDemoData()">
+            <span>⚡ Muat Data Simulasi Keluarga</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 8: Pilihan Login / Masuk Akun Google -->
+  <div id="modal-google-login" class="modal-backdrop hidden" onclick="handleBackdropClick(event, 'modal-google-login')">
+    <div class="modal-sheet modal-auth">
+      <div class="modal-handle"></div>
+      <div class="modal-header">
+        <div class="modal-header-title-row">
+          <div class="google-auth-logo-pill">
+            <svg width="22" height="22" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/></svg>
+          </div>
+          <div>
+            <h3>Masuk dengan Akun Google</h3>
+            <span class="modal-header-sub">Pilih akun Google Anda untuk mengakses buku kas & Google Drive</span>
+          </div>
+        </div>
+        <button class="modal-close" onclick="closeModal('modal-google-login')">&times;</button>
+      </div>
+
+      <div class="auth-modal-body">
+        <p class="auth-selection-label">Pilih akun Google yang tersedia di perangkat ini:</p>
+        <div class="google-accounts-picker" id="google-accounts-picker">
+          <!-- Populated via JS with active accounts -->
+        </div>
+
+        <div class="auth-divider">
+          <span>atau masuk dengan akun Google lain</span>
+        </div>
+
+        <form id="form-new-google-account" onsubmit="handleAddNewGoogleAccount(event)" class="add-google-form">
+          <div class="form-group">
+            <label for="login-google-email">Email Google (Gmail) Anda:</label>
+            <div class="input-with-icon">
+              <span class="input-prefix-icon">📧</span>
+              <input type="email" id="login-google-email" class="form-control" placeholder="contoh: akun.saya@gmail.com" required>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="login-google-name">Nama Panggilan / Tampilan di Aplikasi (Bisa Bebas):</label>
+            <div class="input-with-icon">
+              <span class="input-prefix-icon">👤</span>
+              <input type="text" id="login-google-name" class="form-control" placeholder="Contoh: Ayah / Bunda / Budi">
+            </div>
+            <span class="field-hint">Nama ini yang akan ditampilkan ke keluarga saat berbagi buku kas.</span>
+          </div>
+          <button type="submit" class="btn-google-sign-in">
+            <svg width="18" height="18" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/></svg>
+            <span>Masuk dengan Akun Google Ini</span>
+          </button>
+        </form>
+
+        <div class="auth-security-box">
+          <span class="sec-icon">🔒</span>
+          <div>
+            <strong>Keamanan & Privasi Terjamin:</strong>
+            <p>SakuKita tidak pernah meminta kata sandi (password) Google Anda. Login ini menghubungkan profil identitas dan Google Drive pribadi Anda secara terenkripsi.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 7: Panduan Pasang Aplikasi Siap Pakai di HP & Komputer -->
+  <div id="modal-pwa-guide" class="modal-backdrop hidden" onclick="handleBackdropClick(event, 'modal-pwa-guide')">
+    <div class="modal-sheet">
+      <div class="modal-handle"></div>
+      <div class="modal-header">
+        <div class="modal-header-title-row">
+          <span class="quota-header-icon">📲</span>
+          <div>
+            <h3>Pasang Aplikasi Siap Pakai</h3>
+            <span class="modal-header-sub">Langsung muncul di layar HP Anda tanpa instalasi ribet</span>
+          </div>
+        </div>
+        <button class="modal-close" onclick="closeModal('modal-pwa-guide')">&times;</button>
+      </div>
+
+      <div class="install-guide-body">
+        <div class="install-ready-banner">
+          <img src="icon.svg" width="48" height="48" class="guide-app-icon" alt="SakuKita">
+          <div>
+            <strong class="guide-banner-title">SakuKita Sudah Siap Pasang!</strong>
+            <p class="guide-banner-desc">Aplikasi ini berbasis Progressive Web App (PWA). Begitu dipasang, ikon SakuKita akan langsung muncul di HP Anda seperti aplikasi APK dari Play Store atau App Store.</p>
+          </div>
+        </div>
+
+        <div class="guide-steps-list">
+          <div class="guide-step-card">
+            <div class="step-num-badge">Android</div>
+            <div class="step-content">
+              <strong>Cara Pasang di HP Android (Google Chrome):</strong>
+              <ol>
+                <li>Cukup klik tombol <b>"📲 Pasang Sekarang"</b> di bilah atas aplikasi.</li>
+                <li>Atau tap menu titik tiga (<b>⋮</b>) di pojok kanan atas Chrome.</li>
+                <li>Pilih <b>"Instal Aplikasi"</b> atau <b>"Tambahkan ke Layar Utama"</b>.</li>
+                <li>Selesai! Ikon SakuKita siap dibuka kapan saja dari menu HP.</li>
+              </ol>
+            </div>
+          </div>
+
+          <div class="guide-step-card">
+            <div class="step-num-badge badge-ios">iPhone</div>
+            <div class="step-content">
+              <strong>Cara Pasang di iPhone / iPad (Safari):</strong>
+              <ol>
+                <li>Buka link aplikasi ini di browser <b>Safari</b>.</li>
+                <li>Tap tombol <b>Bagikan (Share ⎋)</b> di bar bawah Safari.</li>
+                <li>Gulir ke bawah dan pilih <b>"Tambah ke Layar Utama (Add to Home Screen)"</b>.</li>
+                <li>Tap <b>"Tambah"</b> di pojok kanan atas. Selesai!</li>
+              </ol>
+            </div>
+          </div>
+
+          <div class="guide-step-card">
+            <div class="step-num-badge badge-pc">Laptop</div>
+            <div class="step-content">
+              <strong>Cara Pasang di Komputer / Laptop (Windows & Mac):</strong>
+              <p>Klik tombol <b>"Pasang Sekarang"</b> atau klik ikon komputer kecil di bilah URL Chrome/Edge untuk memasang sebagai aplikasi desktop mandiri.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Explanation for Opening on Phone from Laptop -->
+        <div class="network-guide-card">
+          <div class="network-guide-header">
+            <span class="network-icon">📶</span>
+            <div>
+              <strong style="color:#60a5fa; font-size:0.85rem">Cara Buka & Pasang di HP (Anda, Istri & Kakak):</strong>
+              <p style="font-size:0.73rem; color:#cbd5e1; margin-top:2px">
+                Kata <code>localhost</code> hanya bisa dibuka di dalam laptop ini. Agar HP Anda dan keluarga bisa membuka & memasangnya, gunakan alamat IP Laptop di bawah:
+              </p>
+            </div>
+          </div>
+          <div class="ip-address-display-box">
+            <span class="ip-label">Tautan Langsung Buka di Browser HP:</span>
+            <div class="ip-input-row">
+              <input type="text" id="phone-app-url" class="ip-field" value="http://192.168.101.71:8080" readonly>
+              <button type="button" class="btn-copy-ip" onclick="copyPhoneUrl()">Salin Link HP</button>
+            </div>
+            <span class="ip-hint">💡 <b>Langkah Mudah:</b> Hubungkan HP ke Wi-Fi / Hotspot yang sama dengan laptop. Buka link di atas lewat Chrome di HP, lalu tap <b>"Pasang Sekarang"</b>!</span>
+          </div>
+
+          <div class="cloud-hosting-box">
+            <strong style="color:#34d399; font-size:0.8rem">🌐 Ingin Bisa Dibuka Tanpa Batas Jarak (Pakai Kuota Seluler)?</strong>
+            <p style="font-size:0.72rem; color:#cbd5e1; margin-top:3px; line-height:1.4">
+              Cukup upload folder ini ke <b>Vercel</b> atau <b>GitHub Pages</b> (100% Gratis Selamanya). Anda akan mendapat alamat online resmi (contoh: <code>https://sakukita.vercel.app</code>) yang bisa dibuka & dipasang di HP siapa pun di mana pun!
+            </p>
+          </div>
+        </div>
+
+        <button class="btn-submit-tx" onclick="triggerPwaInstall()">
+          Pasang Aplikasi Sekarang
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script src="jspdf.umd.min.js"></script>
+  <script src="jspdf.plugin.autotable.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

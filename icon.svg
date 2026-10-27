@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e1b4b" />
+      <stop offset="50%" stop-color="#312e81" />
+      <stop offset="100%" stop-color="#090d16" />
+    </linearGradient>
+    <linearGradient id="walletGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#6366f1" />
+      <stop offset="100%" stop-color="#3b82f6" />
+    </linearGradient>
+    <linearGradient id="accentGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#10b981" />
+      <stop offset="100%" stop-color="#059669" />
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="16" stdDeviation="20" flood-color="#000" flood-opacity="0.5"/>
+    </filter>
+  </defs>
+  
+  <!-- App Background with rounded squircle -->
+  <rect width="512" height="512" rx="128" fill="url(#bgGrad)"/>
+  
+  <!-- Outer Glow Ring -->
+  <rect x="16" y="16" width="480" height="480" rx="112" fill="none" stroke="rgba(99, 102, 241, 0.3)" stroke-width="4"/>
+  
+  <!-- Wallet Body Group with Shadow -->
+  <g filter="url(#shadow)">
+    <!-- Main Wallet -->
+    <rect x="96" y="140" width="320" height="232" rx="36" fill="url(#walletGrad)"/>
+    
+    <!-- Top Flap Detail -->
+    <path d="M96 176 C96 156 112 140 132 140 L380 140 C400 140 416 156 416 176 L416 200 L96 200 Z" fill="rgba(255, 255, 255, 0.15)"/>
+    
+    <!-- Money Card Sticking Out -->
+    <rect x="136" y="104" width="240" height="64" rx="16" fill="url(#accentGrad)"/>
+    <circle cx="256" cy="136" r="14" fill="#ffffff" opacity="0.8"/>
+    
+    <!-- Card Slot / Pocket Clasp -->
+    <rect x="336" y="226" width="90" height="60" rx="20" fill="#1e293b" stroke="rgba(255,255,255,0.2)" stroke-width="3"/>
+    <circle cx="366" cy="256" r="10" fill="#f59e0b"/>
+  </g>
+  
+  <!-- Sparkles / Star -->
+  <path d="M140 330 Q140 300 120 300 Q140 300 140 270 Q140 300 160 300 Q140 300 140 330 Z" fill="#38bdf8"/>
+  <path d="M370 120 Q370 100 355 100 Q370 100 370 80 Q370 100 385 100 Q370 100 370 120 Z" fill="#fbbf24"/>
+</svg>

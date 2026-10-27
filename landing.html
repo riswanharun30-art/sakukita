@@ -1,0 +1,949 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SakuKita - Aplikasi Keuangan Keluarga & Pribadi Mandiri Siap Pakai di HP</title>
+  <meta name="description" content="Aplikasi pencatatan keuangan pribadi dan keluarga mandiri. 100% Bersih dimulai dari nol, izin pantau read-only, auto-sync Google Drive pribadi, dan cetak rekening koran PDF bank.">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/png" href="icon-192.png">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <meta name="theme-color" content="#090d16">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark: #090d16;
+      --bg-card: rgba(15, 23, 42, 0.7);
+      --border-color: rgba(255, 255, 255, 0.08);
+      --primary: #3b82f6;
+      --primary-hover: #2563eb;
+      --accent: #10b981;
+      --accent-purple: #8b5cf6;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      overflow-x: hidden;
+      line-height: 1.6;
+      background-image: 
+        radial-gradient(circle at 15% 15%, rgba(59, 130, 246, 0.12) 0%, transparent 40%),
+        radial-gradient(circle at 85% 30%, rgba(139, 92, 246, 0.1) 0%, transparent 40%),
+        radial-gradient(circle at 50% 80%, rgba(16, 185, 129, 0.08) 0%, transparent 50%);
+      background-attachment: fixed;
+    }
+
+    /* Container */
+    .container {
+      max-width: 1140px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    /* Header Nav */
+    header.site-nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(9, 13, 22, 0.85);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .nav-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 72px;
+    }
+
+    .brand-wrap {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+      color: inherit;
+    }
+
+    .brand-logo {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      object-fit: cover;
+      box-shadow: 0 0 16px rgba(59, 130, 246, 0.4);
+    }
+
+    .brand-info h1 {
+      font-size: 1.25rem;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      background: linear-gradient(135deg, #fff 30%, #93c5fd 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .brand-info span {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      display: block;
+      margin-top: -3px;
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 28px;
+    }
+
+    .nav-links a {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 0.9rem;
+      font-weight: 500;
+      transition: color 0.2s ease;
+    }
+
+    .nav-links a:hover {
+      color: #fff;
+    }
+
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .btn-nav-app {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 9px 18px;
+      background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+      color: #fff;
+      text-decoration: none;
+      font-size: 0.88rem;
+      font-weight: 700;
+      border-radius: 10px;
+      box-shadow: 0 4px 14px rgba(37, 99, 235, 0.4);
+      transition: all 0.2s ease;
+    }
+
+    .btn-nav-app:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(37, 99, 235, 0.5);
+    }
+
+    /* Hero Section */
+    section.hero {
+      padding: 70px 0 60px;
+      position: relative;
+    }
+
+    .hero-grid {
+      display: grid;
+      grid-template-columns: 1.15fr 0.85fr;
+      gap: 48px;
+      align-items: center;
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      background: rgba(16, 185, 129, 0.12);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      border-radius: 99px;
+      color: #34d399;
+      font-size: 0.82rem;
+      font-weight: 700;
+      margin-bottom: 20px;
+    }
+
+    .hero-title {
+      font-size: 2.85rem;
+      font-weight: 800;
+      line-height: 1.2;
+      letter-spacing: -1px;
+      margin-bottom: 20px;
+      background: linear-gradient(135deg, #ffffff 40%, #bfdbfe 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .hero-desc {
+      font-size: 1.1rem;
+      color: var(--text-muted);
+      margin-bottom: 32px;
+      line-height: 1.7;
+    }
+
+    .hero-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px;
+      margin-bottom: 32px;
+    }
+
+    .btn-hero-primary {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 14px 26px;
+      background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+      color: #ffffff;
+      text-decoration: none;
+      font-size: 1rem;
+      font-weight: 700;
+      border-radius: 12px;
+      box-shadow: 0 8px 24px rgba(37, 99, 235, 0.45);
+      transition: all 0.25s ease;
+      cursor: pointer;
+      border: none;
+    }
+
+    .btn-hero-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 30px rgba(37, 99, 235, 0.6);
+    }
+
+    .btn-hero-secondary {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 14px 24px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: #ffffff;
+      text-decoration: none;
+      font-size: 0.98rem;
+      font-weight: 600;
+      border-radius: 12px;
+      transition: all 0.2s ease;
+    }
+
+    .btn-hero-secondary:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: rgba(255, 255, 255, 0.25);
+    }
+
+    /* Live IP Box */
+    .hero-ip-card {
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid rgba(59, 130, 246, 0.25);
+      border-radius: 14px;
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .ip-details {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .ip-title-label {
+      font-size: 0.75rem;
+      color: #60a5fa;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .ip-url-text {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.95rem;
+      color: #f1f5f9;
+      font-weight: 600;
+    }
+
+    .btn-copy-link {
+      padding: 8px 16px;
+      background: rgba(59, 130, 246, 0.2);
+      border: 1px solid rgba(59, 130, 246, 0.4);
+      color: #93c5fd;
+      border-radius: 8px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      white-space: nowrap;
+    }
+
+    .btn-copy-link:hover {
+      background: #3b82f6;
+      color: #fff;
+    }
+
+    /* Phone Mockup Frame */
+    .phone-mockup-wrapper {
+      position: relative;
+      display: flex;
+      justify-content: center;
+    }
+
+    .phone-device {
+      width: 320px;
+      background: #0f172a;
+      border: 10px solid #1e293b;
+      border-radius: 44px;
+      padding: 18px 14px 24px;
+      box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.8), 0 0 40px rgba(59, 130, 246, 0.25);
+      position: relative;
+    }
+
+    .phone-speaker {
+      width: 70px;
+      height: 5px;
+      background: #334155;
+      border-radius: 10px;
+      margin: 0 auto 16px;
+    }
+
+    .mockup-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .mockup-brand {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .mockup-brand img {
+      width: 26px;
+      height: 26px;
+      border-radius: 6px;
+    }
+
+    .mockup-brand span {
+      font-size: 0.95rem;
+      font-weight: 800;
+      color: #fff;
+    }
+
+    .mockup-role-pill {
+      font-size: 0.65rem;
+      padding: 3px 8px;
+      background: rgba(16, 185, 129, 0.15);
+      color: #34d399;
+      border-radius: 6px;
+      font-weight: 700;
+    }
+
+    .mockup-card-balance {
+      background: linear-gradient(135deg, rgba(30, 41, 59, 0.8) 0%, rgba(15, 23, 42, 0.9) 100%);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 16px;
+      padding: 16px;
+      margin-bottom: 14px;
+      text-align: left;
+    }
+
+    .mockup-caption {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+    }
+
+    .mockup-balance {
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: #fff;
+      margin: 4px 0 10px;
+    }
+
+    .mockup-stats-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .mockup-stat {
+      background: rgba(0, 0, 0, 0.2);
+      padding: 6px 8px;
+      border-radius: 8px;
+      font-size: 0.68rem;
+    }
+
+    .mockup-stat.inc { color: #34d399; }
+    .mockup-stat.exp { color: #f87171; }
+
+    .mockup-empty-card {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px dashed rgba(255, 255, 255, 0.12);
+      border-radius: 14px;
+      padding: 20px 12px;
+      text-align: center;
+      margin-top: 14px;
+    }
+
+    .mockup-empty-card .icon {
+      font-size: 1.6rem;
+      margin-bottom: 6px;
+    }
+
+    .mockup-empty-card h5 {
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: #f1f5f9;
+      margin-bottom: 4px;
+    }
+
+    .mockup-empty-card p {
+      font-size: 0.68rem;
+      color: #94a3b8;
+      line-height: 1.4;
+      margin-bottom: 10px;
+    }
+
+    .mockup-btn-add {
+      background: #3b82f6;
+      color: #fff;
+      border: none;
+      padding: 6px 14px;
+      border-radius: 8px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    /* Floating highlight badges */
+    .badge-float {
+      position: absolute;
+      background: rgba(15, 23, 42, 0.95);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      padding: 8px 14px;
+      border-radius: 12px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.6);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      backdrop-filter: blur(10px);
+      z-index: 10;
+      animation: floatBadge 3.5s ease-in-out infinite alternate;
+    }
+
+    .badge-float.top-right {
+      top: 12%;
+      right: -24px;
+      border-color: rgba(16, 185, 129, 0.4);
+      color: #34d399;
+    }
+
+    .badge-float.bottom-left {
+      bottom: 14%;
+      left: -28px;
+      border-color: rgba(239, 68, 68, 0.4);
+      color: #f87171;
+      animation-delay: -1.75s;
+    }
+
+    @keyframes floatBadge {
+      0% { transform: translateY(0); }
+      100% { transform: translateY(-8px); }
+    }
+
+    /* Features Section */
+    section.features {
+      padding: 90px 0 60px;
+      border-top: 1px solid var(--border-color);
+    }
+
+    .section-head {
+      text-align: center;
+      max-width: 680px;
+      margin: 0 auto 56px;
+    }
+
+    .section-head .tag {
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: #60a5fa;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 8px;
+      display: block;
+    }
+
+    .section-head h2 {
+      font-size: 2.2rem;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      margin-bottom: 14px;
+    }
+
+    .section-head p {
+      color: var(--text-muted);
+      font-size: 1.02rem;
+    }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+    }
+
+    .feature-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 20px;
+      padding: 30px 26px;
+      transition: all 0.25s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .feature-card:hover {
+      transform: translateY(-4px);
+      border-color: rgba(59, 130, 246, 0.35);
+      box-shadow: 0 16px 36px rgba(0, 0, 0, 0.4);
+    }
+
+    .feature-icon-box {
+      width: 52px;
+      height: 52px;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.6rem;
+      margin-bottom: 20px;
+      background: rgba(59, 130, 246, 0.12);
+      border: 1px solid rgba(59, 130, 246, 0.25);
+    }
+
+    .feature-icon-box.green {
+      background: rgba(16, 185, 129, 0.12);
+      border-color: rgba(16, 185, 129, 0.25);
+    }
+
+    .feature-icon-box.purple {
+      background: rgba(139, 92, 246, 0.12);
+      border-color: rgba(139, 92, 246, 0.25);
+    }
+
+    .feature-icon-box.red {
+      background: rgba(239, 68, 68, 0.12);
+      border-color: rgba(239, 68, 68, 0.25);
+    }
+
+    .feature-card h3 {
+      font-size: 1.18rem;
+      font-weight: 700;
+      margin-bottom: 10px;
+      color: #fff;
+    }
+
+    .feature-card p {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+
+    /* Install Guide Section */
+    section.install-guide {
+      padding: 80px 0;
+      background: rgba(15, 23, 42, 0.4);
+      border-top: 1px solid var(--border-color);
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .install-cards-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+    }
+
+    .install-box {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 18px;
+      padding: 28px 24px;
+    }
+
+    .install-badge {
+      display: inline-block;
+      font-size: 0.72rem;
+      font-weight: 800;
+      padding: 4px 10px;
+      border-radius: 6px;
+      margin-bottom: 14px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .badge-android { background: rgba(16, 185, 129, 0.15); color: #34d399; }
+    .badge-ios { background: rgba(59, 130, 246, 0.15); color: #60a5fa; }
+    .badge-pc { background: rgba(139, 92, 246, 0.15); color: #a78bfa; }
+
+    .install-box h4 {
+      font-size: 1.05rem;
+      font-weight: 700;
+      margin-bottom: 12px;
+      color: #fff;
+    }
+
+    .install-box ol {
+      padding-left: 20px;
+      color: var(--text-muted);
+      font-size: 0.88rem;
+    }
+
+    .install-box ol li {
+      margin-bottom: 8px;
+    }
+
+    .install-box ol li b {
+      color: #f1f5f9;
+    }
+
+    /* CTA Section */
+    section.cta-ready {
+      padding: 90px 0;
+      text-align: center;
+    }
+
+    .cta-card {
+      background: linear-gradient(135deg, rgba(30, 27, 75, 0.6) 0%, rgba(15, 23, 42, 0.8) 100%);
+      border: 1px solid rgba(99, 102, 241, 0.35);
+      border-radius: 28px;
+      padding: 60px 40px;
+      max-width: 860px;
+      margin: 0 auto;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+    }
+
+    .cta-card h2 {
+      font-size: 2.3rem;
+      font-weight: 800;
+      margin-bottom: 16px;
+      letter-spacing: -0.5px;
+    }
+
+    .cta-card p {
+      font-size: 1.05rem;
+      color: var(--text-muted);
+      max-width: 600px;
+      margin: 0 auto 32px;
+    }
+
+    /* Footer */
+    footer.site-footer {
+      border-top: 1px solid var(--border-color);
+      padding: 36px 0;
+      text-align: center;
+      font-size: 0.82rem;
+      color: #64748b;
+    }
+
+    /* Toast */
+    .toast-box {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: #0f172a;
+      border: 1px solid rgba(59, 130, 246, 0.4);
+      color: #fff;
+      padding: 12px 20px;
+      border-radius: 12px;
+      font-size: 0.88rem;
+      font-weight: 600;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+      z-index: 9999;
+      opacity: 0;
+      transform: translateY(10px);
+      transition: all 0.25s ease;
+      pointer-events: none;
+    }
+
+    .toast-box.show {
+      opacity: 1;
+      transform: translateY(0);
+      pointer-events: auto;
+    }
+
+    /* Responsive */
+    @media (max-width: 900px) {
+      .hero-grid { grid-template-columns: 1fr; text-align: center; }
+      .hero-actions { justify-content: center; }
+      .hero-ip-card { justify-content: center; text-align: center; flex-direction: column; }
+      .features-grid { grid-template-columns: 1fr; }
+      .install-cards-grid { grid-template-columns: 1fr; }
+      .nav-links { display: none; }
+      .phone-mockup-wrapper { margin-top: 20px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Sticky Navbar -->
+  <header class="site-nav">
+    <div class="container nav-inner">
+      <a href="landing.html" class="brand-wrap">
+        <img src="icon-192.png" alt="SakuKita Icon" class="brand-logo">
+        <div class="brand-info">
+          <h1>SakuKita</h1>
+          <span>Keuangan Keluarga & Pribadi Mandiri</span>
+        </div>
+      </a>
+
+      <nav class="nav-links">
+        <a href="#fitur">Keunggulan</a>
+        <a href="#izin-pantau">Izin Pantau</a>
+        <a href="#rekening-pdf">PDF Mutasi</a>
+        <a href="#pasang-hp">Cara Pasang</a>
+      </nav>
+
+      <div class="nav-actions">
+        <a href="index.html" class="btn-nav-app">
+          <span>🚀 Buka Aplikasi</span>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Hero Section -->
+  <section class="hero">
+    <div class="container hero-grid">
+      <div class="hero-left">
+        <div class="hero-badge">
+          <span>✨ 100% Bersih Dimulai dari Nol • Mandiri & Privat</span>
+        </div>
+        <h2 class="hero-title">
+          Kelola Keuangan Keluarga dengan Aman, Tenang & Transparan
+        </h2>
+        <p class="hero-desc">
+          Aplikasi pencatatan keuangan bersama tanpa rasa was-was data diubah. Mulai bersih dari nol rupiah, berikan izin pantau (read-only) kepada pasangan atau saudara, tersambung ke Google Drive pribadi, dan cetak rekening koran PDF bank kapan saja.
+        </p>
+
+        <div class="hero-actions">
+          <a href="index.html" class="btn-hero-primary">
+            <span>⚡ Buka & Pasang Aplikasi Sekarang</span>
+          </a>
+          <a href="#pasang-hp" class="btn-hero-secondary">
+            <span>📲 Panduan Pasang di HP</span>
+          </a>
+        </div>
+
+        <!-- Localhost Wi-Fi Link Box -->
+        <div class="hero-ip-card">
+          <div class="ip-details">
+            <span class="ip-title-label">📶 Tautan Buka di Browser HP (Wi-Fi / Hotspot):</span>
+            <span class="ip-url-text" id="landing-phone-url">http://192.168.101.71:8080</span>
+          </div>
+          <button class="btn-copy-link" onclick="copyLandingUrl()">Salin Link HP</button>
+        </div>
+      </div>
+
+      <!-- Phone Mockup Frame -->
+      <div class="hero-right phone-mockup-wrapper">
+        <div class="badge-float top-right">
+          <span>🔒 Hak Pantau Read-Only</span>
+        </div>
+        <div class="badge-float bottom-left">
+          <span>📑 E-Statement PDF Bank</span>
+        </div>
+
+        <div class="phone-device">
+          <div class="phone-speaker"></div>
+          
+          <div class="mockup-header">
+            <div class="mockup-brand">
+              <img src="icon-192.png" alt="SakuKita">
+              <span>SakuKita</span>
+            </div>
+            <span class="mockup-role-pill">👑 Pemilik Akun</span>
+          </div>
+
+          <div class="mockup-card-balance">
+            <span class="mockup-caption">Total Saldo Bersih</span>
+            <div class="mockup-balance">Rp 0</div>
+            <div class="mockup-stats-row">
+              <div class="mockup-stat inc">Pemasukan: +Rp 0</div>
+              <div class="mockup-stat exp">Pengeluaran: -Rp 0</div>
+            </div>
+          </div>
+
+          <div class="mockup-empty-card">
+            <div class="icon">✨</div>
+            <h5>Buku Kas Bersih dari Nol</h5>
+            <p>Belum ada data contoh fiktif. Rekam pemasukan & pengeluaran pertama Anda sekarang.</p>
+            <a href="index.html" class="mockup-btn-add" style="text-decoration:none; display:inline-block;">+ Catat Transaksi</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features Grid -->
+  <section class="features" id="fitur">
+    <div class="container">
+      <div class="section-head">
+        <span class="tag">Dirancang untuk Keluarga Indonesia</span>
+        <h2>Kenapa SakuKita Lebih Nyaman & Aman?</h2>
+        <p>Solusi keuangan bersama yang memisahkan antara transparansi saling memantau dengan hak merubah data.</p>
+      </div>
+
+      <div class="features-grid">
+        <!-- Feature 1 -->
+        <div class="feature-card">
+          <div class="feature-icon-box green">✨</div>
+          <h3>100% Bersih Dimulai dari Nol</h3>
+          <p>Saat aplikasi dibuka atau dipasang, buku kas Anda bersih tanpa transaksi fiktif atau saldo palsu. Anda memegang kendali penuh atas data nyata keuangan Anda sejak hari pertama.</p>
+        </div>
+
+        <!-- Feature 2 -->
+        <div class="feature-card" id="izin-pantau">
+          <div class="feature-icon-box purple">🔒</div>
+          <h3>Izin Pantau (Read-Only Guard)</h3>
+          <p>Undang pasangan atau saudara untuk memantau keuangan Anda. Sistem secara otomatis mengunci hak akses sehingga mereka hanya bisa memantau tanpa bisa merubah atau menghapus data Anda.</p>
+        </div>
+
+        <!-- Feature 3 -->
+        <div class="feature-card">
+          <div class="feature-icon-box">📁</div>
+          <h3>Google Drive & Sheets Terisolasi</h3>
+          <p>Setiap akun Google memiliki lembar kerja mutasi tersendiri. Ketika data disinkronkan atau diunduh, hanya data pribadi milik akun tersebut yang disertakan—tidak akan pernah tercampur.</p>
+        </div>
+
+        <!-- Feature 4 -->
+        <div class="feature-card" id="rekening-pdf">
+          <div class="feature-icon-box red">📑</div>
+          <h3>Cetak E-Statement (PDF Bank)</h3>
+          <p>Unduh laporan mutasi resmi format PDF berstandar perbankan langsung ke memori HP Anda. Lengkap dengan nomor rekening SakuKita, kolom Debet (DB), Kredit (CR), dan Saldo Berjalan.</p>
+        </div>
+
+        <!-- Feature 5 -->
+        <div class="feature-card">
+          <div class="feature-icon-box green">💰</div>
+          <h3>Bebas Biaya Langganan Selamanya</h3>
+          <p>Manfaatkan kuota backend cloud gratis dengan indikator limit realtime. Aman digunakan bersama keluarga hingga >5 orang tanpa tagihan bulanan.</p>
+        </div>
+
+        <!-- Feature 6 -->
+        <div class="feature-card">
+          <div class="feature-icon-box">📲</div>
+          <h3>Pasang Siap Pakai di HP (PWA)</h3>
+          <p>Tidak perlu mendownload file APK asing yang berisiko. Teknologi Progressive Web App standar resmi Google memungkinkan Anda memasang aplikasi ke menu HP dalam 1 detik.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Step-by-step Install Guide -->
+  <section class="install-guide" id="pasang-hp">
+    <div class="container">
+      <div class="section-head">
+        <span class="tag">Instalasi Mudah & Siap Pakai</span>
+        <h2>Cara Pasang SakuKita di HP Anda</h2>
+        <p>Aplikasi langsung muncul di layar utama HP seperti aplikasi APK dari Play Store atau App Store.</p>
+      </div>
+
+      <div class="install-cards-grid">
+        <!-- Android Chrome -->
+        <div class="install-box">
+          <span class="install-badge badge-android">Android (Chrome)</span>
+          <h4>HP Android (Google Chrome)</h4>
+          <ol>
+            <li>Buka link <b>http://192.168.101.71:8080</b> di Chrome HP Anda.</li>
+            <li>Tap banner <b>"Pasang Sekarang"</b> di atas layar.</li>
+            <li>Atau tap menu titik tiga (<b>⋮</b>) lalu pilih <b>"Instal Aplikasi"</b> / <b>"Tambahkan ke Layar Utama"</b>.</li>
+            <li>Selesai! Ikon SakuKita siap dibuka dari menu HP.</li>
+          </ol>
+        </div>
+
+        <!-- iPhone Safari -->
+        <div class="install-box">
+          <span class="install-badge badge-ios">iPhone & iPad (Safari)</span>
+          <h4>Apple iPhone (Safari)</h4>
+          <ol>
+            <li>Buka link di browser <b>Safari</b> di iPhone Anda.</li>
+            <li>Tap tombol <b>Bagikan (Share ⎋)</b> di bar bawah Safari.</li>
+            <li>Gulir ke bawah dan pilih <b>"Tambah ke Layar Utama (Add to Home Screen)"</b>.</li>
+            <li>Tap <b>"Tambah"</b> di pojok kanan atas. Selesai!</li>
+          </ol>
+        </div>
+
+        <!-- PC & Mac -->
+        <div class="install-box">
+          <span class="install-badge badge-pc">Laptop & Komputer</span>
+          <h4>Windows PC & Mac (Chrome / Edge)</h4>
+          <ol>
+            <li>Buka aplikasi di browser Chrome atau Edge di komputer.</li>
+            <li>Klik tombol <b>"Pasang Sekarang"</b> atau ikon komputer di bilah URL.</li>
+            <li>Aplikasi akan berjalan di jendela mandiri tanpa gangguan bilah browser.</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA Ready Section -->
+  <section class="cta-ready">
+    <div class="container">
+      <div class="cta-card">
+        <h2>Siap Memulai Catatan Keuangan Anda dari Nol?</h2>
+        <p>Bebas data fiktif, aman untuk keluarga, dan langsung siap pakai di HP Anda sekarang juga.</p>
+        <a href="index.html" class="btn-hero-primary" style="font-size:1.05rem; padding:16px 32px;">
+          <span>🚀 Luncurkan Aplikasi SakuKita Sekarang</span>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="site-footer">
+    <div class="container">
+      <p>© 2026 SakuKita • Keuangan Kolaboratif Keluarga & Pribadi Mandiri. 100% Aman & Terisolasi.</p>
+    </div>
+  </footer>
+
+  <!-- Toast Notification -->
+  <div id="toast" class="toast-box">Tautan berhasil disalin ke clipboard!</div>
+
+  <script>
+    function copyLandingUrl() {
+      const url = document.getElementById('landing-phone-url').innerText;
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(url).then(() => showToast());
+      } else {
+        const t = document.createElement('textarea');
+        t.value = url;
+        document.body.appendChild(t);
+        t.select();
+        document.execCommand('copy');
+        document.body.removeChild(t);
+        showToast();
+      }
+    }
+
+    function showToast() {
+      const el = document.getElementById('toast');
+      el.classList.add('show');
+      setTimeout(() => el.classList.remove('show'), 2600);
+    }
+  </script>
+</body>
+</html>
