@@ -1,47 +1,76 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
   <defs>
     <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#1e1b4b" />
-      <stop offset="50%" stop-color="#312e81" />
-      <stop offset="100%" stop-color="#090d16" />
+      <stop offset="0%" stop-color="#0e1726" />
+      <stop offset="50%" stop-color="#090d16" />
+      <stop offset="100%" stop-color="#04060a" />
     </linearGradient>
-    <linearGradient id="walletGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#6366f1" />
-      <stop offset="100%" stop-color="#3b82f6" />
+
+    <linearGradient id="blueGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#3b82f6" />
+      <stop offset="100%" stop-color="#1d4ed8" />
     </linearGradient>
-    <linearGradient id="accentGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#10b981" />
-      <stop offset="100%" stop-color="#059669" />
+
+    <linearGradient id="coinGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fef08a" />
+      <stop offset="40%" stop-color="#f59e0b" />
+      <stop offset="100%" stop-color="#d97706" />
     </linearGradient>
-    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
-      <feDropShadow dx="0" dy="16" stdDeviation="20" flood-color="#000" flood-opacity="0.5"/>
+
+    <filter id="softShadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="10" stdDeviation="14" flood-color="#000000" flood-opacity="0.6"/>
     </filter>
   </defs>
-  
-  <!-- App Background with rounded squircle -->
+
+  <!-- Background Squircle -->
   <rect width="512" height="512" rx="128" fill="url(#bgGrad)"/>
-  
-  <!-- Outer Glow Ring -->
-  <rect x="16" y="16" width="480" height="480" rx="112" fill="none" stroke="rgba(99, 102, 241, 0.3)" stroke-width="4"/>
-  
-  <!-- Wallet Body Group with Shadow -->
-  <g filter="url(#shadow)">
-    <!-- Main Wallet -->
-    <rect x="96" y="140" width="320" height="232" rx="36" fill="url(#walletGrad)"/>
+  <rect x="8" y="8" width="496" height="496" rx="120" fill="none" stroke="rgba(59, 130, 246, 0.2)" stroke-width="2"/>
+
+  <!-- Main Symbol: Rumah + Dompet + Keluarga + Koin Emas -->
+  <g filter="url(#softShadow)">
+    <!-- House Roof (Protective Home) -->
+    <path d="M 256 90 
+             L 110 200 
+             L 132 226 
+             L 156 208 
+             L 156 280 
+             L 356 280 
+             L 356 208 
+             L 380 226 
+             L 402 200 Z" 
+          fill="none" />
     
-    <!-- Top Flap Detail -->
-    <path d="M96 176 C96 156 112 140 132 140 L380 140 C400 140 416 156 416 176 L416 200 L96 200 Z" fill="rgba(255, 255, 255, 0.15)"/>
+    <!-- Chimney -->
+    <rect x="330" y="125" width="28" height="55" rx="6" fill="#2563eb"/>
     
-    <!-- Money Card Sticking Out -->
-    <rect x="136" y="104" width="240" height="64" rx="16" fill="url(#accentGrad)"/>
-    <circle cx="256" cy="136" r="14" fill="#ffffff" opacity="0.8"/>
-    
-    <!-- Card Slot / Pocket Clasp -->
-    <rect x="336" y="226" width="90" height="60" rx="20" fill="#1e293b" stroke="rgba(255,255,255,0.2)" stroke-width="3"/>
-    <circle cx="366" cy="256" r="10" fill="#f59e0b"/>
+    <!-- Roof Outline (Thick Stroke) -->
+    <path d="M 104 205 L 256 90 L 408 205" 
+          fill="none" stroke="#2563eb" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>
+
+    <!-- Wallet Base (Saku / Dompet) -->
+    <rect x="136" y="270" width="240" height="150" rx="28" fill="none" stroke="#2563eb" stroke-width="18"/>
+    <!-- Wallet Flap & Clasp -->
+    <path d="M 136 295 L 256 360 L 376 295" fill="none" stroke="#1d4ed8" stroke-width="12" stroke-linejoin="round"/>
+    <rect x="340" y="325" width="48" height="34" rx="12" fill="#1e293b" stroke="#3b82f6" stroke-width="6"/>
+    <circle cx="364" cy="342" r="6" fill="#60a5fa"/>
+
+    <!-- Family Silhouettes (Ayah, Anak, Ibu) -->
+    <!-- Father (Left) -->
+    <circle cx="205" cy="205" r="18" fill="#38bdf8"/>
+    <path d="M 180 290 L 180 245 C 180 230, 190 225, 205 225 C 220 225, 230 230, 230 245 L 230 290 Z" fill="#38bdf8"/>
+
+    <!-- Mother (Right) -->
+    <circle cx="307" cy="205" r="18" fill="#38bdf8"/>
+    <path d="M 282 290 L 282 245 C 282 230, 292 225, 307 225 C 322 225, 332 230, 332 245 L 332 290 Z" fill="#38bdf8"/>
+
+    <!-- Child (Center) -->
+    <circle cx="256" cy="240" r="14" fill="#67e8f9"/>
+    <path d="M 238 290 L 238 270 C 238 260, 245 256, 256 256 C 267 256, 274 260, 274 270 L 274 290 Z" fill="#67e8f9"/>
+
+    <!-- Gold Coin (Center Front - Wealth & Budget) -->
+    <circle cx="256" cy="330" r="42" fill="url(#coinGrad)" stroke="#b45309" stroke-width="3"/>
+    <circle cx="256" cy="330" r="34" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="2" stroke-dasharray="4 2"/>
+    <!-- Currency Rp / $ Symbol -->
+    <text x="256" y="342" font-family="'Plus Jakarta Sans', Arial, sans-serif" font-size="32" font-weight="900" fill="#78350f" text-anchor="middle">Rp</text>
   </g>
-  
-  <!-- Sparkles / Star -->
-  <path d="M140 330 Q140 300 120 300 Q140 300 140 270 Q140 300 160 300 Q140 300 140 330 Z" fill="#38bdf8"/>
-  <path d="M370 120 Q370 100 355 100 Q370 100 370 80 Q370 100 385 100 Q370 100 370 120 Z" fill="#fbbf24"/>
 </svg>

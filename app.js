@@ -1,48 +1,28 @@
 // SakuKita - Collaborative Multi-Account & Family Finance Ledger
 // Features: Viewer-Only Permissions, Google Sheets Auto-Sync, Backend Limit Monitor
 
-// Clean Starting User Profiles (Starts 100% clean and empty from zero)
+// Clean Starting User Profiles (Starts 100% clean with single personal user, zero dummy members)
 const DEFAULT_USERS = {
   user_1: {
     id: 'user_1',
-    name: 'Saya (Akun Utama)',
-    email: 'saya@gmail.com',
-    avatar: '👨‍💼',
+    name: 'Pengguna SakuKita',
+    email: '',
+    avatar: '👤',
     color: '#3b82f6',
-    googleSheetUrl: '',
-    webhookUrl: '',
-    autoSyncEnabled: true
-  },
-  user_2: {
-    id: 'user_2',
-    name: 'Pasangan / Anggota 1',
-    email: 'keluarga1@gmail.com',
-    avatar: '👩‍💼',
-    color: '#ec4899',
-    googleSheetUrl: '',
-    webhookUrl: '',
-    autoSyncEnabled: true
-  },
-  user_3: {
-    id: 'user_3',
-    name: 'Keluarga 2',
-    email: 'keluarga2@gmail.com',
-    avatar: '🧑‍💻',
-    color: '#10b981',
     googleSheetUrl: '',
     webhookUrl: '',
     autoSyncEnabled: true
   }
 };
 
-// Clean Starting Financial Spaces (Starts 100% clean with Rp 0 and 0 transactions)
+// Clean Starting Financial Spaces (Starts 100% clean with Rp 0, 0 transactions, and 0 fake viewers)
 const DEFAULT_SPACES = {
   space_1: {
     id: 'space_1',
-    name: 'Buku Kas Utama Saya',
+    name: 'Buku Kas Utama',
     icon: '📘',
     ownerId: 'user_1',
-    allowedViewers: ['user_2'],
+    allowedViewers: [],
     budget: 0,
     wallets: [
       { id: 'w-1', name: 'Dompet Utama', balance: 0, color: '#3b82f6' }
@@ -230,24 +210,24 @@ const DEMO_SAMPLE_SPACES = {
   }
 };
 
-// Standard Categories
+// Standard Categories (DANA Style: Logo & 1 Kata Singkat)
 const CATEGORIES = {
   EXPENSE: [
-    { name: 'Makanan & Minuman', icon: '🍲' },
-    { name: 'Belanja Bulanan', icon: '🛒' },
-    { name: 'Transportasi & Bensin', icon: '⛽' },
-    { name: 'Tagihan & Utilitas', icon: '💡' },
-    { name: 'Kesehatan & Obat', icon: '💊' },
-    { name: 'Pendidikan & Belajar', icon: '📚' },
-    { name: 'Hiburan & Santai', icon: '🍿' },
-    { name: 'Keperluan Lainnya', icon: '📦' }
+    { name: 'Makan', icon: '🍔' },
+    { name: 'Belanja', icon: '🛒' },
+    { name: 'Bensin', icon: '⛽' },
+    { name: 'Tagihan', icon: '💡' },
+    { name: 'Kesehatan', icon: '💊' },
+    { name: 'Pendidikan', icon: '📚' },
+    { name: 'Hiburan', icon: '🍿' },
+    { name: 'Lainnya', icon: '📦' }
   ],
   INCOME: [
-    { name: 'Gaji & Upah', icon: '💼' },
-    { name: 'Hasil Usaha & Penjualan', icon: '🛍️' },
-    { name: 'Bonus & THR', icon: '🎉' },
-    { name: 'Investasi & Bagi Hasil', icon: '📈' },
-    { name: 'Pendapatan Lainnya', icon: '💰' }
+    { name: 'Gaji', icon: '💼' },
+    { name: 'Usaha', icon: '🛍️' },
+    { name: 'Bonus', icon: '🎉' },
+    { name: 'Investasi', icon: '📈' },
+    { name: 'Lainnya', icon: '💰' }
   ]
 };
 
@@ -258,6 +238,45 @@ let activeUserId = 'user_1';
 let activeSpaceId = 'space_1';
 let activeTxType = 'EXPENSE';
 let currentFilter = 'all';
+let isBalanceHidden = false;
+
+// Eye Toggle for Balance Privacy (khas DANA / BCA Mobile)
+function toggleBalanceVisibility() {
+  isBalanceHidden = !isBalanceHidden;
+  const eyeIcon = document.getElementById('eye-icon-symbol');
+  if (eyeIcon) {
+    eyeIcon.textContent = isBalanceHidden ? '🙈' : '👁️';
+  }
+  const currentSpace = getActiveSpace();
+  renderOverview(currentSpace);
+}
+
+// FinTech Bottom Nav Section Switcher
+function navToSection(section) {
+  document.querySelectorAll('.bottom-nav-fintech .nav-item-btn').forEach(btn => btn.classList.remove('active'));
+  
+  if (section === 'home') {
+    const homeBtn = document.getElementById('nav-btn-home');
+    if (homeBtn) homeBtn.classList.add('active');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  } else if (section === 'history') {
+    const histBtn = document.getElementById('nav-btn-history');
+    if (histBtn) histBtn.classList.add('active');
+    const txSection = document.getElementById('transactions-section');
+    if (txSection) txSection.scrollIntoView({ behavior: 'smooth' });
+  }
+}
+
+// Account Sheet Modal Open/Close
+function openAccountModal() {
+  const modal = document.getElementById('modal-account');
+  if (modal) modal.classList.remove('hidden');
+}
+
+function closeAccountModal() {
+  const modal = document.getElementById('modal-account');
+  if (modal) modal.classList.add('hidden');
+}
 
 // Real-time synchronization channel
 const syncChannel = ('BroadcastChannel' in window) 
@@ -299,17 +318,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
   setupRealtimeListeners();
 
-  // On first install / fresh launch: Show Google Account Chooser
-  if (!localStorage.getItem('sakukita_logged_in')) {
+  // If not logged in or active user email is empty: Show Google Login
+  const currentUser = getActiveUser();
+  if (!localStorage.getItem('sakukita_logged_in') || !currentUser.email) {
     setTimeout(() => {
       openGoogleLoginModal();
-    }, 500);
+    }, 400);
   }
 });
 
-// Storage Management - Clean V5 Defaults
+// Storage Management - Clean V6 Defaults (100% Persisted per Google Account)
 function loadData() {
-  const savedUsers = localStorage.getItem('sakukita_users_v5');
+  const savedUsers = localStorage.getItem('sakukita_users_v6');
   if (savedUsers) {
     try {
       users = JSON.parse(savedUsers);
@@ -321,7 +341,7 @@ function loadData() {
     saveUsers();
   }
 
-  const savedSpaces = localStorage.getItem('sakukita_spaces_v5');
+  const savedSpaces = localStorage.getItem('sakukita_spaces_v6');
   if (savedSpaces) {
     try {
       spaces = JSON.parse(savedSpaces);
@@ -332,14 +352,22 @@ function loadData() {
     spaces = JSON.parse(JSON.stringify(DEFAULT_SPACES));
     saveSpaces();
   }
+
+  const savedUserId = localStorage.getItem('sakukita_current_user_id');
+  if (savedUserId && users[savedUserId]) {
+    activeUserId = savedUserId;
+  } else {
+    const firstUserId = Object.keys(users)[0];
+    if (firstUserId) activeUserId = firstUserId;
+  }
 }
 
 function saveUsers() {
-  localStorage.setItem('sakukita_users_v5', JSON.stringify(users));
+  localStorage.setItem('sakukita_users_v6', JSON.stringify(users));
 }
 
 function saveSpaces() {
-  localStorage.setItem('sakukita_spaces_v5', JSON.stringify(spaces));
+  localStorage.setItem('sakukita_spaces_v6', JSON.stringify(spaces));
 }
 
 // Zero-Data Reset & Demo Simulation Handlers
@@ -448,8 +476,22 @@ function renderActiveUserProfile() {
   // Header active Google email pill
   const headerEmail = document.getElementById('header-google-email');
   if (headerEmail) {
-    headerEmail.textContent = user.email;
+    headerEmail.textContent = user.email.length > 15 ? user.email.split('@')[0] : user.email;
   }
+
+  // Header user greeting & avatar (DANA style)
+  const headerAvatar = document.getElementById('header-user-avatar');
+  const headerName = document.getElementById('header-user-name');
+  if (headerAvatar) headerAvatar.innerHTML = renderUserAvatarHtml(user, 38);
+  if (headerName) headerName.textContent = user.name;
+
+  // Account Sheet details
+  const acctAvatar = document.getElementById('account-sheet-avatar');
+  const acctName = document.getElementById('account-sheet-name');
+  const acctEmail = document.getElementById('account-sheet-email');
+  if (acctAvatar) acctAvatar.innerHTML = renderUserAvatarHtml(user, 40);
+  if (acctName) acctName.textContent = user.name;
+  if (acctEmail) acctEmail.textContent = user.email;
 
   const subdetail = document.getElementById('user-profile-subdetail');
   if (subdetail) {
@@ -582,19 +624,19 @@ function renderAll() {
   if (isOwner) {
     viewerBanner.classList.add('hidden');
     roleTag.className = 'role-badge role-owner';
-    roleTag.textContent = '👑 Pemilik Penuh';
+    roleTag.textContent = '👑 Pemilik';
     spaceOwnerLabel.textContent = `Buku Kas: ${currentSpace.name}`;
-    addTxBtn.className = 'btn-add-transaction';
-    addTxBtnText.textContent = 'Catat Transaksi';
+    addTxBtn.className = 'nav-fab-btn';
+    addTxBtnText.textContent = 'Catat';
     if (addWalletBtn) addWalletBtn.classList.remove('disabled');
   } else {
     viewerBanner.classList.remove('hidden');
-    viewerDesc.innerHTML = `Buku kas ini milik <strong>${escapeHtml(ownerUser.name)}</strong> (${escapeHtml(ownerUser.email)}). Anda memiliki <strong>Izin Memantau (Read-Only)</strong>. Hanya pemilik buku yang dapat menambah, merubah, atau menghapus transaksi.`;
+    viewerDesc.innerHTML = `Buku kas ini milik <strong>${escapeHtml(ownerUser.name)}</strong> (${escapeHtml(ownerUser.email)}). Anda memiliki <strong>Izin Memantau (Read-Only)</strong>.`;
     roleTag.className = 'role-badge role-viewer';
-    roleTag.textContent = '👁️ Mode Pantau (Read-Only)';
-    spaceOwnerLabel.textContent = `Memantau Buku Kas: ${currentSpace.name}`;
-    addTxBtn.className = 'btn-add-transaction btn-viewer-locked';
-    addTxBtnText.textContent = '🔒 Mode Hanya Pantau';
+    roleTag.textContent = '👁️ Pantau';
+    spaceOwnerLabel.textContent = `Memantau: ${currentSpace.name}`;
+    addTxBtn.className = 'nav-fab-btn btn-viewer-locked';
+    addTxBtnText.textContent = '🔒 Pantau';
     if (addWalletBtn) addWalletBtn.classList.add('disabled');
   }
 
@@ -607,7 +649,10 @@ function renderAll() {
 
 function renderOverview(currentSpace) {
   const totalBalance = currentSpace.wallets.reduce((sum, w) => sum + Number(w.balance), 0);
-  document.getElementById('total-balance').textContent = formatRupiah(totalBalance);
+  const balEl = document.getElementById('total-balance');
+  if (balEl) {
+    balEl.textContent = isBalanceHidden ? 'Rp ••••••••' : formatRupiah(totalBalance);
+  }
 
   let totalIncome = 0;
   let totalExpense = 0;
@@ -782,7 +827,7 @@ function populateCategoryPicker() {
     btn.dataset.category = cat.name;
     btn.dataset.icon = cat.icon;
     btn.innerHTML = `
-      <span class="cat-icon">${cat.icon}</span>
+      <span class="cat-icon-wrap">${cat.icon}</span>
       <span class="cat-name">${cat.name}</span>
     `;
     btn.onclick = () => selectCategory(btn, cat.name);
@@ -1588,7 +1633,7 @@ function openQuotaModal() {
   document.getElementById('modal-quota').classList.remove('hidden');
 }
 
-// Collaboration & Permission Management Modal (Viewer-Only)
+// Collaboration & Permission Management Modal (Viewer-Only - 100% Bebas Data Contoh)
 function openCollabModal() {
   const container = document.getElementById('collab-content-area');
   const currentSpace = getActiveSpace();
@@ -1596,33 +1641,50 @@ function openCollabModal() {
   const ownerUser = users[currentSpace.ownerId] || { name: 'Pemilik' };
 
   if (isOwner) {
-    // Owner view: list other family Google accounts with Grant / Revoke View-Only access
+    if (!currentSpace.allowedViewers) currentSpace.allowedViewers = [];
+
+    // Filter valid viewers that are in currentSpace.allowedViewers
+    const allowedViewerUsers = currentSpace.allowedViewers
+      .map(id => users[id])
+      .filter(u => u && u.id !== activeUserId);
+
     let membersHtml = '';
-    Object.values(users).forEach(u => {
-      if (u.id === activeUserId) return; // skip self
-
-      const isAllowed = currentSpace.allowedViewers && currentSpace.allowedViewers.includes(u.id);
-
-      membersHtml += `
-        <div class="member-access-item">
-          <div class="member-item-info">
-            <span class="member-item-avatar">${renderUserAvatarHtml(u, 34)}</span>
-            <div>
-              <span class="member-item-name">${escapeHtml(u.name)}</span>
-              <span class="member-item-email">${escapeHtml(u.email)}</span>
-            </div>
-          </div>
-          <div>
-            <button 
-              class="btn-toggle-access ${isAllowed ? 'btn-revoke' : 'btn-grant'}"
-              onclick="toggleViewerAccess('${u.id}')"
-            >
-              ${isAllowed ? '🚫 Cabut Izin' : '👁️ Izinkan Pantau'}
-            </button>
-          </div>
+    if (allowedViewerUsers.length === 0) {
+      membersHtml = `
+        <div class="collab-empty-box">
+          <div class="collab-empty-icon">👥</div>
+          <strong class="collab-empty-title">Belum Ada Anggota Keluarga</strong>
+          <p class="collab-empty-desc">Buku kas ini masih bersifat pribadi. Gunakan formulir di bawah untuk menambahkan email Google anggota keluarga (istri, suami, anak, atau rekan) agar mereka dapat memantau keuangan Anda.</p>
         </div>
       `;
-    });
+    } else {
+      membersHtml = '<div class="members-access-list">';
+      allowedViewerUsers.forEach(u => {
+        membersHtml += `
+          <div class="member-access-item">
+            <div class="member-item-info">
+              <span class="member-item-avatar">${renderUserAvatarHtml(u, 34)}</span>
+              <div>
+                <span class="member-item-name">${escapeHtml(u.name)}</span>
+                <span class="member-item-email">${escapeHtml(u.email)}</span>
+              </div>
+            </div>
+            <div class="member-item-actions">
+              <span class="badge-viewer-active">👁️ Pantau</span>
+              <button 
+                type="button"
+                class="btn-toggle-access btn-revoke"
+                onclick="handleRemoveCollabMember('${u.id}')"
+                title="Cabut Izin Pantau"
+              >
+                🚫 Cabut Izin
+              </button>
+            </div>
+          </div>
+        `;
+      });
+      membersHtml += '</div>';
+    }
 
     container.innerHTML = `
       <div class="collab-card">
@@ -1631,16 +1693,33 @@ function openCollabModal() {
           <span class="collab-badge badge-shared">Milik Anda</span>
         </div>
         <p class="collab-desc">
-          Berikan izin kepada anggota keluarga di bawah ini agar mereka dapat <b>memantau</b> keuangan Anda di aplikasi mereka:
+          Kelola siapa saja anggota keluarga yang diizinkan <b>memantau</b> buku kas ini:
         </p>
-        <div class="members-access-list">
-          ${membersHtml}
+
+        ${membersHtml}
+
+        <!-- Form Tambah Anggota Keluarga Baru (100% Bebas Data Contoh) -->
+        <div class="add-collab-section">
+          <h4 class="add-collab-heading">+ Beri Izin Anggota Keluarga Baru</h4>
+          <form id="form-add-collab" onsubmit="handleAddCollabMember(event)">
+            <div class="form-group" style="margin-bottom:8px;">
+              <label for="collab-member-email">Email Google (Gmail) Anggota:</label>
+              <input type="email" id="collab-member-email" class="form-control" placeholder="contoh: istri@gmail.com" required>
+            </div>
+            <div class="form-group" style="margin-bottom:10px;">
+              <label for="collab-member-name">Nama Panggilan / Peran:</label>
+              <input type="text" id="collab-member-name" class="form-control" placeholder="Contoh: Istri / Bunda / Adik" required>
+            </div>
+            <button type="submit" class="btn-submit-tx" style="margin-top:0; padding:10px;">
+              <span>+ Berikan Izin Pantau</span>
+            </button>
+          </form>
         </div>
       </div>
 
       <div class="collab-notice-box">
-        <strong>🔒 Jaminan Keamanan & Hak Pantau (Read-Only):</strong>
-        Anggota yang Anda beri izin <b>HANYA DAPAT MEMANTAU</b> saldo & riwayat transaksi Anda. Sistem mengunci hak akses sehingga mereka <b>TIDAK BISA menambah, merubah, atau menghapus</b> catatan keuangan Anda.
+        <strong>🔒 Jaminan Keamanan Hak Pantau (Read-Only):</strong>
+        Anggota yang Anda izinkan <b>HANYA DAPAT MEMANTAU</b> saldo & mutasi transaksi Anda. Mereka <b>TIDAK BISA menambah, merubah, atau menghapus</b> catatan keuangan Anda.
       </div>
     `;
   } else {
@@ -1665,26 +1744,74 @@ function openCollabModal() {
   document.getElementById('modal-collaboration').classList.remove('hidden');
 }
 
-function toggleViewerAccess(targetUserId) {
-  const currentSpace = getActiveSpace();
-  if (!isOwnerOfCurrentSpace()) return;
+function handleAddCollabMember(e) {
+  e.preventDefault();
+  const emailInput = document.getElementById('collab-member-email');
+  const nameInput = document.getElementById('collab-member-name');
+  const email = emailInput.value.trim().toLowerCase();
+  const name = nameInput.value.trim();
 
-  if (!currentSpace.allowedViewers) currentSpace.allowedViewers = [];
-
-  const index = currentSpace.allowedViewers.indexOf(targetUserId);
-  const targetUser = users[targetUserId] || { name: 'Pengguna' };
-
-  if (index > -1) {
-    currentSpace.allowedViewers.splice(index, 1);
-    showLiveToast('🚫 Izin Dicabut', `Akses pantau untuk ${targetUser.name} telah dicabut.`);
-  } else {
-    currentSpace.allowedViewers.push(targetUserId);
-    showLiveToast('👁️ Izin Diberikan', `${targetUser.name} sekarang dapat memantau buku kas ini.`);
+  if (!email || !email.includes('@')) {
+    alert('Masukkan email Google yang valid.');
+    return;
   }
 
+  const currentSpace = getActiveSpace();
+  if (!currentSpace.allowedViewers) currentSpace.allowedViewers = [];
+
+  let memberUser = Object.values(users).find(u => u.email && u.email.toLowerCase() === email);
+  if (!memberUser) {
+    const memberId = 'user_' + Date.now().toString(36);
+    memberUser = {
+      id: memberId,
+      name: name,
+      email: email,
+      avatar: '👥',
+      photo: '',
+      color: '#ec4899',
+      googleSheetUrl: '',
+      webhookUrl: '',
+      autoSyncEnabled: true
+    };
+    users[memberId] = memberUser;
+  } else {
+    if (name) memberUser.name = name;
+  }
+
+  if (!currentSpace.allowedViewers.includes(memberUser.id)) {
+    currentSpace.allowedViewers.push(memberUser.id);
+  }
+
+  saveUsers();
   saveSpaces();
-  notifyOtherTabs('PERMISSION_CHANGED', { spaceId: currentSpace.id, targetUserId });
+
+  emailInput.value = '';
+  nameInput.value = '';
+
   openCollabModal();
+  renderAll();
+  showLiveToast('👥 Izin Diberikan', `${name} (${email}) dapat memantau buku kas ini.`);
+  notifyOtherTabs('PERMISSION_CHANGED', { spaceId: currentSpace.id, targetUserId: memberUser.id });
+}
+
+function handleRemoveCollabMember(targetUserId) {
+  const currentSpace = getActiveSpace();
+  const targetUser = users[targetUserId] || { name: 'Anggota' };
+
+  if (confirm(`Apakah Anda yakin ingin mencabut izin pantau untuk ${targetUser.name}?`)) {
+    if (currentSpace.allowedViewers) {
+      currentSpace.allowedViewers = currentSpace.allowedViewers.filter(id => id !== targetUserId);
+    }
+    saveSpaces();
+    openCollabModal();
+    renderAll();
+    showLiveToast('🚫 Izin Dicabut', `Akses pantau untuk ${targetUser.name} telah dicabut.`);
+    notifyOtherTabs('PERMISSION_CHANGED', { spaceId: currentSpace.id, targetUserId });
+  }
+}
+
+function toggleViewerAccess(targetUserId) {
+  handleRemoveCollabMember(targetUserId);
 }
 
 // Profile Photo Upload & Custom Avatar Handlers
@@ -1822,107 +1949,129 @@ function handleSaveProfile(e) {
   notifyOtherTabs('PROFILE_UPDATED', { userId: user.id });
 }
 
-// Google Sign-In & Account Switcher Handlers
-function openGoogleLoginModal() {
-  const container = document.getElementById('google-accounts-picker');
-  if (container) {
+// Google Sign-In & Authentication Handlers (2 Opsi: Akun Google di HP vs Manual)
+function getDeviceGoogleAccounts() {
+  let list = [];
+  const raw = localStorage.getItem('sakukita_device_google_accounts');
+  if (raw) {
+    try {
+      list = JSON.parse(raw);
+    } catch (e) {
+      list = [];
+    }
+  }
+
+  // Include any verified user from `users` that has a valid email and not already in list
+  Object.values(users).forEach(u => {
+    if (u.email && u.email.includes('@')) {
+      if (!list.some(a => a.email.toLowerCase() === u.email.toLowerCase())) {
+        list.push({ email: u.email, name: u.name, avatar: u.avatar || '👤', photo: u.photo || '' });
+      }
+    }
+  });
+
+  return list;
+}
+
+function saveDeviceGoogleAccount(email, name, avatar = '👤', photo = '') {
+  let list = getDeviceGoogleAccounts();
+  const existingIdx = list.findIndex(a => a.email.toLowerCase() === email.toLowerCase());
+  if (existingIdx >= 0) {
+    if (name) list[existingIdx].name = name;
+    if (photo) list[existingIdx].photo = photo;
+  } else {
+    list.push({ email, name, avatar, photo });
+  }
+  localStorage.setItem('sakukita_device_google_accounts', JSON.stringify(list));
+}
+
+function renderDeviceAccountsList() {
+  const container = document.getElementById('device-accounts-container');
+  if (!container) return;
+
+  const accounts = getDeviceGoogleAccounts();
+  if (accounts.length === 0) {
+    container.innerHTML = `
+      <div style="font-size:0.75rem; color:#94a3b8; background:rgba(255,255,255,0.02); border:1px dashed rgba(255,255,255,0.08); border-radius:8px; padding:10px 12px; text-align:center;">
+        Belum ada akun tersimpan di HP ini. Tekan tombol di bawah atau masukkan email manual di Opsi 2.
+      </div>
+    `;
+    const titleEl = document.getElementById('btn-onetap-title');
+    if (titleEl) titleEl.textContent = 'Masuk dengan Akun Google di HP';
+  } else {
     let html = '';
-    Object.values(users).forEach(u => {
-      const isSelected = u.id === activeUserId;
+    accounts.forEach(acc => {
       html += `
-        <div class="google-acc-card ${isSelected ? 'selected' : ''}" onclick="selectGoogleAccount('${u.id}')">
-          <div class="google-acc-avatar-wrap">
-            ${renderUserAvatarHtml(u, 40)}
+        <div class="device-acc-card" onclick="loginWithSavedGoogleAccount('${escapeHtml(acc.email)}', '${escapeHtml(acc.name)}')">
+          <div class="device-acc-avatar-wrap">
+            <svg width="20" height="20" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/></svg>
           </div>
-          <div class="google-acc-info">
-            <strong class="google-acc-name">${escapeHtml(u.name)}</strong>
-            <span class="google-acc-email">${escapeHtml(u.email)}</span>
+          <div class="device-acc-info">
+            <strong class="device-acc-name">${escapeHtml(acc.name)}</strong>
+            <span class="device-acc-email">${escapeHtml(acc.email)}</span>
           </div>
-          <div class="google-acc-action">
-            ${isSelected ? '<span class="badge-active-google">✓ Sedang Masuk</span>' : '<span class="btn-select-google">Pilih Akun</span>'}
-          </div>
+          <button type="button" class="btn-choose-device-acc">Pilih Akun</button>
         </div>
       `;
     });
     container.innerHTML = html;
+    const titleEl = document.getElementById('btn-onetap-title');
+    if (titleEl) titleEl.textContent = `Masuk sebagai ${accounts[0].name}`;
   }
-  document.getElementById('modal-google-login').classList.remove('hidden');
 }
 
-function selectGoogleAccount(userId) {
-  if (!users[userId]) return;
-  activeUserId = userId;
-  localStorage.setItem('sakukita_logged_in', 'true');
-
-  validateActiveSpace();
-  currentFilter = 'all';
-
-  renderUserPills();
-  renderActiveUserProfile();
-  updateSpaceSelectorUI();
-  renderAll();
-  updateBackendQuotaDisplay();
-
-  closeModal('modal-google-login');
-  showLiveToast('👋 Berhasil Masuk', `Akun Google ${users[userId].email} aktif.`);
-  notifyOtherTabs('USER_SWITCHED', { userId });
-}
-
-function handleAddNewGoogleAccount(e) {
-  e.preventDefault();
-  const emailInput = document.getElementById('login-google-email');
-  const nameInput = document.getElementById('login-google-name');
-  const email = emailInput.value.trim().toLowerCase();
-  const customName = nameInput.value.trim();
-
-  if (!email || !email.includes('@')) {
-    alert('Masukkan email Google yang valid.');
-    return;
-  }
-
-  let existingUser = Object.values(users).find(u => u.email.toLowerCase() === email);
+function loginWithSavedGoogleAccount(email, name) {
+  let existingUser = Object.values(users).find(u => u.email && u.email.toLowerCase() === email.toLowerCase());
   if (existingUser) {
     activeUserId = existingUser.id;
-    if (customName) existingUser.name = customName;
+    if (name) existingUser.name = name;
   } else {
-    const newId = 'user_' + (Date.now().toString(36));
-    const fallbackName = customName || email.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-    users[newId] = {
-      id: newId,
-      name: fallbackName,
-      email: email,
-      avatar: '👤',
-      photo: '',
-      color: '#3b82f6',
-      googleSheetUrl: '',
-      webhookUrl: '',
-      autoSyncEnabled: true
-    };
-    activeUserId = newId;
-
-    const newSpaceId = 'space_' + newId;
-    if (!spaces[newSpaceId]) {
-      spaces[newSpaceId] = {
-        id: newSpaceId,
-        name: `Buku Kas (${fallbackName})`,
-        icon: '📘',
-        ownerId: newId,
-        allowedViewers: [],
-        budget: 0,
-        wallets: [
-          { id: 'w-' + newId, name: 'Dompet Utama', balance: 0, color: '#3b82f6' }
-        ],
-        transactions: []
+    if (users.user_1 && (!users.user_1.email || users.user_1.email === '')) {
+      users.user_1.email = email;
+      users.user_1.name = name || email.split('@')[0];
+      activeUserId = 'user_1';
+      if (spaces.space_1) {
+        spaces.space_1.name = `Buku Kas Utama (${users.user_1.name})`;
+      }
+    } else {
+      const newId = 'user_' + (Date.now().toString(36));
+      users[newId] = {
+        id: newId,
+        name: name || email.split('@')[0],
+        email: email,
+        avatar: '👤',
+        photo: '',
+        color: '#3b82f6',
+        googleSheetUrl: '',
+        webhookUrl: '',
+        autoSyncEnabled: true
       };
+      activeUserId = newId;
+
+      const newSpaceId = 'space_' + newId;
+      if (!spaces[newSpaceId]) {
+        spaces[newSpaceId] = {
+          id: newSpaceId,
+          name: `Buku Kas (${users[newId].name})`,
+          icon: '📘',
+          ownerId: newId,
+          allowedViewers: [],
+          budget: 0,
+          wallets: [
+            { id: 'w-' + newId, name: 'Dompet Utama', balance: 0, color: '#3b82f6' }
+          ],
+          transactions: []
+        };
+      }
+      activeSpaceId = newSpaceId;
     }
   }
 
+  saveDeviceGoogleAccount(email, name);
   localStorage.setItem('sakukita_logged_in', 'true');
+  localStorage.setItem('sakukita_current_user_id', activeUserId);
   saveUsers();
   saveSpaces();
-
-  emailInput.value = '';
-  nameInput.value = '';
 
   validateActiveSpace();
   renderUserPills();
@@ -1933,16 +2082,150 @@ function handleAddNewGoogleAccount(e) {
   updateBackendQuotaDisplay();
 
   closeModal('modal-google-login');
-  showLiveToast('🎉 Berhasil Masuk', `Akun Google ${email} aktif.`);
+  showLiveToast('🎉 Berhasil Masuk', `Selamat datang kembali, ${getActiveUser().name}!`);
+  notifyOtherTabs('USER_SWITCHED', { userId: activeUserId });
+}
+
+function triggerGoogleOneTapLogin() {
+  const accounts = getDeviceGoogleAccounts();
+  if (accounts.length === 1) {
+    loginWithSavedGoogleAccount(accounts[0].email, accounts[0].name);
+    return;
+  } else if (accounts.length > 1) {
+    showLiveToast('👆 Pilih Akun Google', 'Silakan ketuk akun Google Anda pada daftar Opsi 1.');
+    const container = document.getElementById('device-accounts-container');
+    if (container) {
+      container.scrollIntoView({ behavior: 'smooth' });
+    }
+    return;
+  }
+
+  // First time prompt for phone account
+  const email = prompt('Pilih / Masukkan Email Akun Google (Gmail) di HP Anda:\n\n(Akun ini akan langsung diingat di HP Anda untuk login otomatis 1-tap ke depan)', '');
+  if (!email || !email.includes('@')) {
+    if (email !== null) alert('Masukkan email Google yang valid (contoh: nama@gmail.com).');
+    return;
+  }
+  const defaultName = email.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+  const name = prompt('Nama panggilan Anda di aplikasi:', defaultName) || defaultName;
+  loginWithSavedGoogleAccount(email.trim().toLowerCase(), name.trim());
+}
+
+function openGoogleLoginModal() {
+  const emailInput = document.getElementById('login-google-email');
+  const nameInput = document.getElementById('login-google-name');
+  const currentUser = getActiveUser();
+
+  if (emailInput && currentUser && currentUser.email) {
+    emailInput.value = currentUser.email;
+  }
+  if (nameInput && currentUser && currentUser.name && currentUser.name !== 'Pengguna SakuKita') {
+    nameInput.value = currentUser.name;
+  }
+
+  renderDeviceAccountsList();
+  document.getElementById('modal-google-login').classList.remove('hidden');
+}
+
+function handleAddNewGoogleAccount(e) {
+  e.preventDefault();
+  const emailInput = document.getElementById('login-google-email');
+  const nameInput = document.getElementById('login-google-name');
+  const email = emailInput.value.trim().toLowerCase();
+  const customName = nameInput.value.trim();
+
+  if (!email || !email.includes('@')) {
+    alert('Masukkan email Google yang valid (contoh: nama@gmail.com).');
+    return;
+  }
+
+  let existingUser = Object.values(users).find(u => u.email && u.email.toLowerCase() === email);
+  if (existingUser) {
+    activeUserId = existingUser.id;
+    if (customName) existingUser.name = customName;
+  } else {
+    // If the initial default user has empty email, link it to this account
+    if (users.user_1 && (!users.user_1.email || users.user_1.email === '')) {
+      const fallbackName = customName || email.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+      users.user_1.email = email;
+      users.user_1.name = fallbackName;
+      activeUserId = 'user_1';
+      if (spaces.space_1) {
+        spaces.space_1.name = `Buku Kas Utama (${fallbackName})`;
+      }
+    } else {
+      const newId = 'user_' + (Date.now().toString(36));
+      const fallbackName = customName || email.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+      users[newId] = {
+        id: newId,
+        name: fallbackName,
+        email: email,
+        avatar: '👤',
+        photo: '',
+        color: '#3b82f6',
+        googleSheetUrl: '',
+        webhookUrl: '',
+        autoSyncEnabled: true
+      };
+      activeUserId = newId;
+
+      const newSpaceId = 'space_' + newId;
+      if (!spaces[newSpaceId]) {
+        spaces[newSpaceId] = {
+          id: newSpaceId,
+          name: `Buku Kas (${fallbackName})`,
+          icon: '📘',
+          ownerId: newId,
+          allowedViewers: [],
+          budget: 0,
+          wallets: [
+            { id: 'w-' + newId, name: 'Dompet Utama', balance: 0, color: '#3b82f6' }
+          ],
+          transactions: []
+        };
+      }
+      activeSpaceId = newSpaceId;
+    }
+  }
+
+  saveDeviceGoogleAccount(email, customName || getActiveUser().name);
+  localStorage.setItem('sakukita_logged_in', 'true');
+  localStorage.setItem('sakukita_current_user_id', activeUserId);
+  saveUsers();
+  saveSpaces();
+
+  validateActiveSpace();
+  renderUserPills();
+  renderActiveUserProfile();
+  updateSpaceSelectorUI();
+  populateCategoryPicker();
+  renderAll();
+  updateBackendQuotaDisplay();
+
+  closeModal('modal-google-login');
+  showLiveToast('🎉 Berhasil Masuk', `Selamat datang, ${getActiveUser().name}!`);
   notifyOtherTabs('USER_SWITCHED', { userId: activeUserId });
 }
 
 function handleGoogleLogout() {
-  if (confirm('Keluar dari sesi akun Google saat ini?\nAnda bisa memilih akun Google lain setelah keluar.')) {
+  if (confirm('Keluar dari sesi akun Google saat ini?\nCatatan keuangan Anda akan tetap tersimpan aman di aplikasi ini.')) {
     localStorage.removeItem('sakukita_logged_in');
     closeModal('modal-profile');
+    closeModal('modal-account');
+
+    // Pre-fill inputs with logged out account info for quick one-tap re-login
+    const emailInput = document.getElementById('login-google-email');
+    const nameInput = document.getElementById('login-google-name');
+    const currentUser = getActiveUser();
+    if (emailInput && currentUser && currentUser.email) {
+      emailInput.value = currentUser.email;
+    }
+    if (nameInput && currentUser && currentUser.name && currentUser.name !== 'Pengguna SakuKita') {
+      nameInput.value = currentUser.name;
+    }
+
     openGoogleLoginModal();
-    showLiveToast('👋 Telah Keluar', 'Silakan pilih akun Google untuk masuk kembali.');
+    showLiveToast('👋 Berhasil Keluar', 'Data Anda tetap tersimpan. Masukkan email untuk login kembali.');
   }
 }
 

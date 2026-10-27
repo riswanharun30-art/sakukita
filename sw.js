@@ -1,5 +1,5 @@
 // SakuKita Service Worker - Offline Caching & PWA Ready
-const CACHE_NAME = 'sakukita-cache-v2';
+const CACHE_NAME = 'sakukita-cache-v5-google-auth-logo';
 const ASSETS = [
   './',
   './index.html',

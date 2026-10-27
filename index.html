@@ -18,106 +18,64 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <!-- Container Desktop Frame / Phone Wrapper -->
+  <!-- Main Phone Screen Container (FinTech Mobile Shell) -->
   <div class="app-layout">
-    <!-- PWA 1-Click Install Banner (Siap Pakai Langsung di HP) -->
-    <div id="pwa-install-banner" class="pwa-install-banner">
+    <!-- PWA 1-Click Install Banner (Hanya muncul jika belum diinstal) -->
+    <div id="pwa-install-banner" class="pwa-install-banner hidden">
       <div class="pwa-banner-left">
-        <img src="icon-192.png" width="34" height="34" class="pwa-app-logo" alt="SakuKita Icon">
+        <img src="icon-192.png" width="32" height="32" class="pwa-app-logo" alt="SakuKita Icon">
         <div class="pwa-text-box">
-          <strong class="pwa-title">Pasang Aplikasi SakuKita</strong>
-          <span class="pwa-sub">Siap pakai di HP tanpa tindakan tambahan</span>
+          <strong class="pwa-title">Pasang SakuKita</strong>
+          <span class="pwa-sub">Aplikasi siap pakai di layar HP Anda</span>
         </div>
       </div>
       <div class="pwa-banner-actions">
         <button id="btn-pwa-install" class="btn-install-app" onclick="triggerPwaInstall()">
-          <span>📲 Pasang Sekarang</span>
+          <span>📲 Pasang</span>
         </button>
         <button class="btn-pwa-guide" onclick="openInstallGuideModal()" title="Panduan Pasang di HP">
-          <span>ℹ️ Panduan</span>
+          <span>ℹ️</span>
         </button>
-        <a href="landing.html" class="btn-pwa-guide btn-pwa-web-btn" title="Lihat Website Penjelasan & Download APK">
-          <span>🌐 Website</span>
-        </a>
       </div>
     </div>
 
-    <!-- Top Bar Navigation -->
-    <header class="app-header">
-      <div class="brand-row">
-        <div class="brand">
-          <div class="brand-icon">
-            <img src="icon-192.png" width="28" height="28" style="border-radius:7px; object-fit:cover;" alt="SakuKita Logo">
+    <!-- Mobile Top App Bar (khas DANA / OVO) -->
+    <header class="app-header-mobile">
+      <div class="mobile-header-top">
+        <!-- User Avatar & Friendly Greeting -->
+        <div class="user-greeting-wrap" onclick="openEditProfileModal()" title="Klik untuk ubah nama atau foto profil">
+          <div class="user-avatar-badge" id="header-user-avatar">
+            <span>👤</span>
           </div>
-          <div>
-            <h1 class="brand-title">SakuKita</h1>
-            <span class="brand-tagline">Keuangan Kolaboratif Multi-Akun</span>
+          <div class="user-greeting-text">
+            <span class="greeting-sub">Halo, Selamat Datang 👋</span>
+            <h2 class="user-greeting-name" id="header-user-name">Saya</h2>
           </div>
         </div>
 
-        <!-- Quick Status Pills: Website, Backend Quota & Google Sheets -->
-        <div class="header-quick-actions">
-          <a href="landing.html" class="badge-pill website-pill" title="Website Resmi & Download APK">
-            <span>🌐 Website</span>
-          </a>
-          <button id="btn-quick-quota" class="badge-pill quota-pill" title="Pantau Kuota Backend Cloud Free Tier" onclick="openQuotaModal()">
-            <span class="pulse-dot green-dot"></span>
-            <span id="quota-quick-label">Limit: 100% Aman</span>
+        <!-- Header Actions: Google Account Pill & Settings Menu -->
+        <div class="header-right-badges">
+          <button class="btn-compact-google" onclick="openGoogleLoginModal()" title="Pilih / Ganti Akun Google">
+            <svg width="14" height="14" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/></svg>
+            <span id="header-google-email">Google</span>
           </button>
-          <button id="btn-quick-sheets" class="badge-pill sheets-pill" title="Pengaturan & Status Auto-Sync Google Sheets" onclick="openGoogleSheetsModal()">
-            <span class="sheets-icon">📊</span>
-            <span id="sheets-quick-label">Sheets Aktif</span>
+          <button class="btn-header-icon" onclick="openAccountModal()" title="Buka Menu Akun & Pengaturan">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
           </button>
         </div>
       </div>
 
-      <!-- User Profile & Google Account Bar -->
-      <div class="user-switch-bar">
-        <div class="user-switch-header">
-          <div class="active-google-pill-wrap" onclick="openGoogleLoginModal()" title="Klik untuk ganti atau pilih akun Google">
-            <span class="google-g-mini">
-              <svg width="14" height="14" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/></svg>
-            </span>
-            <span id="header-google-email">Memuat akun Google...</span>
-            <span class="google-dropdown-arrow">▼</span>
-          </div>
-
-          <div class="user-header-right-btns">
-            <button class="btn-edit-profile" title="Ubah Nama Tampilan & Unggah Foto Profil" onclick="openEditProfileModal()">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-              <span>Ubah Nama & Foto</span>
-            </button>
-            <button class="btn-switch-account" title="Pilih / Ganti Akun Google" onclick="openGoogleLoginModal()">
-              <span>Ganti Akun</span>
-            </button>
-          </div>
-        </div>
-
-        <div class="user-pill-selector" id="user-pill-container">
-          <!-- Populated dynamically via JS with real user names & avatars -->
-        </div>
-
-        <div class="user-profile-subdetail" id="user-profile-subdetail">
-          <!-- Active user email & Google account badge -->
-        </div>
-
-        <button id="btn-open-partner-window" class="btn-dual-window" title="Buka jendela baru untuk simulasi dua anggota keluarga bersamaan" onclick="openDualWindow()">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-          Buka Tab Baru (Simulasi Multi-Pengguna)
-        </button>
-      </div>
-
-      <!-- Ruang Kas / Space Selector (Role & Permission aware) -->
-      <div class="space-selector-bar" id="space-selector-bar">
-        <div class="space-info">
-          <span class="space-label">Buku Kas:</span>
-          <select id="active-space-select" class="space-dropdown" onchange="handleSpaceChange(this.value)">
+      <!-- Buku Kas Selector Capsule Bar -->
+      <div class="space-selector-capsule">
+        <div class="space-capsule-left">
+          <span class="capsule-icon">📘</span>
+          <select id="active-space-select" class="space-dropdown-clean" onchange="handleSpaceChange(this.value)">
             <!-- Populated via JS based on user permissions -->
           </select>
         </div>
-        <button id="btn-collaboration" class="btn-collab" onclick="openCollabModal()">
+        <button id="btn-collaboration" class="btn-collab-capsule" onclick="openCollabModal()">
           <span id="collab-icon">🤝</span>
-          <span id="collab-btn-text">Kelola Izin Pantau</span>
+          <span id="collab-btn-text">Izin Pantau</span>
         </button>
       </div>
     </header>
@@ -126,94 +84,117 @@
     <main class="main-container">
       <!-- Read-Only Viewer Warning Banner (Shows when user is a Viewer) -->
       <div id="viewer-banner" class="viewer-mode-banner hidden">
-        <div class="viewer-mode-left">
-          <span class="viewer-banner-icon">👁️</span>
-          <div>
-            <div class="viewer-banner-title">Mode Hanya Pantau (Read-Only)</div>
-            <div class="viewer-banner-desc" id="viewer-banner-desc">
-              Buku kas ini milik <strong>...</strong>. Anda memiliki izin memantau keuangan tanpa hak merubah atau menghapus data.
-            </div>
+        <span class="viewer-banner-icon">👁️</span>
+        <div>
+          <div class="viewer-banner-title">Mode Hanya Pantau (Read-Only)</div>
+          <div class="viewer-banner-desc" id="viewer-banner-desc">
+            Buku kas ini milik orang lain. Anda memiliki izin memantau keuangan tanpa hak merubah data.
           </div>
         </div>
-        <span class="viewer-badge-tag">Hanya Pantau</span>
       </div>
 
-      <!-- Balance Overview Card -->
-      <section class="card balance-card">
-        <div class="balance-header">
-          <div>
-            <div class="card-caption-row">
-              <span class="card-caption" id="balance-space-owner-label">Total Saldo Buku Kas</span>
-              <span id="access-role-tag" class="role-badge role-owner">👑 Pemilik</span>
-            </div>
-            <h2 id="total-balance" class="balance-amount">Rp 0</h2>
+      <!-- Hero Balance Card (DANA / OVO Royal Blue Style) -->
+      <section class="card balance-card-fintech">
+        <div class="fintech-card-bg-glow"></div>
+        
+        <div class="fintech-balance-top">
+          <div class="balance-title-row">
+            <span class="fintech-card-label" id="balance-space-owner-label">Saldo SakuKita</span>
+            <button type="button" class="btn-toggle-eye" onclick="toggleBalanceVisibility()" title="Sembunyikan / Tampilkan Saldo">
+              <span id="eye-icon-symbol">👁️</span>
+            </button>
           </div>
-          <div class="status-badge" id="sync-status">
-            <span class="pulse-dot"></span>
-            <span id="sync-status-text">Sinkron Realtime</span>
-          </div>
-        </div>
-
-        <div class="balance-grid">
-          <div class="stat-box income-box">
-            <div class="stat-icon income-icon">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
-            </div>
-            <div>
-              <span class="stat-label">Pemasukan Bulan Ini</span>
-              <p id="total-income" class="stat-val">+Rp 0</p>
-            </div>
-          </div>
-          <div class="stat-box expense-box">
-            <div class="stat-icon expense-icon">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/></svg>
-            </div>
-            <div>
-              <span class="stat-label">Pengeluaran Bulan Ini</span>
-              <p id="total-expense" class="stat-val">-Rp 0</p>
+          <div class="role-and-sync-row">
+            <span id="access-role-tag" class="role-badge role-owner">👑 Pemilik</span>
+            <div class="status-badge-mini" id="sync-status">
+              <span class="pulse-dot"></span>
+              <span id="sync-status-text">Online</span>
             </div>
           </div>
         </div>
 
-        <!-- Monthly Budget Progress Bar -->
-        <div class="budget-section">
-          <div class="budget-info">
-            <span>Anggaran Bulanan (Target: <b id="budget-limit-text">Rp 6.000.000</b>)</span>
-            <span id="budget-percentage" class="budget-pct">0%</span>
+        <!-- Big Bold Financial Balance -->
+        <div class="fintech-amount-wrap">
+          <h2 id="total-balance" class="fintech-balance-amount">Rp 0</h2>
+        </div>
+
+        <!-- Income & Expense Mini Chips -->
+        <div class="fintech-summary-grid">
+          <div class="fintech-summary-item income-chip">
+            <div class="chip-icon">↓</div>
+            <div class="chip-text">
+              <span class="chip-label">Pemasukan</span>
+              <span id="total-income" class="chip-val">+Rp 0</span>
+            </div>
           </div>
-          <div class="progress-bar-bg">
-            <div id="budget-progress-fill" class="progress-bar-fill" style="width: 0%;"></div>
+          <div class="fintech-summary-item expense-chip">
+            <div class="chip-icon">↑</div>
+            <div class="chip-text">
+              <span class="chip-label">Pengeluaran</span>
+              <span id="total-expense" class="chip-val">-Rp 0</span>
+            </div>
           </div>
+        </div>
+
+        <!-- 4 Quick Actions Grid (Khas DANA / OVO: Catat, Mutasi PDF, Keluarga, Sheets) -->
+        <div class="fintech-quick-actions-row">
+          <button type="button" class="quick-action-circle-btn" onclick="handleNewTransactionClick()" title="Catat Transaksi">
+            <div class="action-circle-icon bg-blue">➕</div>
+            <span class="action-circle-label">Catat</span>
+          </button>
+          <button type="button" class="quick-action-circle-btn" onclick="exportPersonalPdf()" title="Cetak Rekening Koran (PDF) Resmi">
+            <div class="action-circle-icon bg-indigo">📄</div>
+            <span class="action-circle-label">Mutasi PDF</span>
+          </button>
+          <button type="button" class="quick-action-circle-btn" onclick="openCollabModal()" title="Kelola Izin Pantau Keluarga">
+            <div class="action-circle-icon bg-purple">👥</div>
+            <span class="action-circle-label">Keluarga</span>
+          </button>
+          <button type="button" class="quick-action-circle-btn" onclick="openGoogleSheetsModal()" title="Buka Integrasi Google Sheets">
+            <div class="action-circle-icon bg-green">📊</div>
+            <span class="action-circle-label">Sheets</span>
+          </button>
         </div>
       </section>
 
-      <!-- Wallets Horizontal Carousel -->
+      <!-- Monthly Budget Section -->
+      <section class="budget-fintech-card">
+        <div class="budget-info">
+          <span>Target Anggaran Bulanan: <b id="budget-limit-text">Rp 0</b></span>
+          <span id="budget-percentage" class="budget-pct">0%</span>
+        </div>
+        <div class="progress-bar-bg">
+          <div id="budget-progress-fill" class="progress-bar-fill" style="width: 0%;"></div>
+        </div>
+      </section>
+
+      <!-- Kantong & Dompet Rekening Carousel -->
       <section class="wallets-section">
         <div class="section-title-row">
-          <h3 class="section-title">Kantong / Dompet Rekening</h3>
-          <span id="btn-add-wallet-action" class="section-action" onclick="openAddWalletModal()">+ Tambah Dompet</span>
+          <h3 class="section-title">Kantong & Dompet</h3>
+          <span id="btn-add-wallet-action" class="section-action" onclick="openAddWalletModal()">+ Tambah</span>
         </div>
         <div class="wallet-scroll" id="wallets-container">
-          <!-- Dynamically populated -->
+          <!-- Populated dynamically via JS -->
         </div>
       </section>
 
-      <!-- Transactions & Feed Section -->
-      <section class="transactions-section">
+      <!-- Riwayat Transaksi Section -->
+      <section class="transactions-section" id="transactions-section">
         <div class="section-title-row">
           <div>
-            <h3 class="section-title">Aktivitas & Riwayat Transaksi</h3>
-            <span class="section-subtitle" id="feed-subtitle">Transparan antar anggota yang terhubung</span>
+            <h3 class="section-title">Riwayat Transaksi</h3>
+            <span class="section-subtitle" id="feed-subtitle" style="display:none;">Transparan antar anggota</span>
           </div>
-          <div class="tx-header-actions">
-            <button class="btn-quick-pdf" onclick="exportPersonalPdf()" title="Unduh Rekening Koran (PDF) Resmi">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-              <span>Cetak PDF</span>
-            </button>
-            <div class="filter-pills" id="feed-filter">
-              <!-- Populated via JS based on active space members -->
-            </div>
-          </div>
+          <button type="button" class="btn-mini-pdf" onclick="exportPersonalPdf()" title="Unduh Rekening Koran Bank">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            <span>Rekening Koran</span>
+          </button>
+        </div>
+
+        <!-- Filter Pills -->
+        <div class="filter-pills" id="feed-filter">
+          <!-- Populated via JS based on active space members -->
         </div>
 
         <!-- Live Toast Notification container -->
@@ -232,22 +213,144 @@
       </section>
     </main>
 
-    <!-- Bottom Floating Action Bar -->
-    <div class="bottom-action-bar">
-      <button class="btn-database-info" onclick="openQuotaModal()" title="Pantau Kuota Backend">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/><ellipse cx="12" cy="5" rx="9" ry="3"/></svg>
-        <span>Limit Kuota</span>
+    <!-- Bottom Navigation Bar (khas DANA / OVO / GoPay) -->
+    <nav class="bottom-nav-fintech">
+      <button type="button" class="nav-item-btn active" id="nav-btn-home" onclick="navToSection('home')">
+        <span class="nav-icon">🏠</span>
+        <span class="nav-label">Beranda</span>
+      </button>
+      <button type="button" class="nav-item-btn" id="nav-btn-history" onclick="navToSection('history')">
+        <span class="nav-icon">📋</span>
+        <span class="nav-label">Riwayat</span>
       </button>
 
-      <button class="btn-gsheets-nav" onclick="openGoogleSheetsModal()" title="Buka Integrasi Google Sheets">
-        <span class="sheets-logo-icon">📊</span>
-        <span>Google Sheets</span>
+      <!-- Center Raised Floating Action Button (FAB) -->
+      <div class="nav-fab-wrap">
+        <button type="button" id="btn-main-add-tx" class="nav-fab-btn" onclick="handleNewTransactionClick()" title="Catat Transaksi Baru">
+          <span class="fab-plus">+</span>
+        </button>
+        <span id="btn-add-tx-text" class="nav-fab-subtext">Catat</span>
+      </div>
+
+      <button type="button" class="nav-item-btn" id="nav-btn-family" onclick="openCollabModal()">
+        <span class="nav-icon">👥</span>
+        <span class="nav-label">Keluarga</span>
+      </button>
+      <button type="button" class="nav-item-btn" id="nav-btn-account" onclick="openAccountModal()">
+        <span class="nav-icon">⚙️</span>
+        <span class="nav-label">Akun</span>
+      </button>
+    </nav>
+  </div>
+
+  <!-- Modal Menu / Akun (DANA Style Profile & Menu Sheet) -->
+  <div id="modal-account" class="modal-backdrop hidden" onclick="handleBackdropClick(event, 'modal-account')">
+    <div class="modal-sheet">
+      <div class="modal-handle"></div>
+      <div class="modal-header">
+        <div class="modal-header-title-row">
+          <div class="user-avatar-badge" id="account-sheet-avatar">
+            <span>👤</span>
+          </div>
+          <div>
+            <h3 id="account-sheet-name">Akun Saya</h3>
+            <span class="modal-header-sub" id="account-sheet-email">memuat...</span>
+          </div>
+        </div>
+        <button type="button" class="modal-close" onclick="closeAccountModal()">&times;</button>
+      </div>
+
+      <!-- Quick Action: Edit Name & Photo -->
+      <button type="button" class="btn-submit-tx" style="margin-top:0; margin-bottom:12px; background:linear-gradient(135deg,#3b82f6,#2563eb);" onclick="closeAccountModal(); openEditProfileModal();">
+        <span>✏️ Ubah Nama Panggilan & Foto Profil</span>
       </button>
 
-      <button id="btn-main-add-tx" class="btn-add-transaction" onclick="handleNewTransactionClick()">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-        <span id="btn-add-tx-text">Catat Transaksi</span>
-      </button>
+      <!-- Google Connected Info & Switcher -->
+      <div id="user-profile-subdetail" style="margin-bottom:8px;"></div>
+      <div class="user-pill-selector" id="user-pill-container" title="Pilih anggota keluarga aktif"></div>
+
+      <!-- Menu Navigation Tiles -->
+      <div class="account-menu-list">
+        <div class="account-tile-btn" onclick="closeAccountModal(); openGoogleSheetsModal();">
+          <div class="account-tile-left">
+            <span class="account-tile-icon">📊</span>
+            <div>
+              <strong class="account-tile-title">Google Sheets & Drive</strong>
+              <span class="account-tile-desc" id="sheets-quick-label">Auto-sync & backup mutasi pribadi</span>
+            </div>
+          </div>
+          <span class="account-tile-arrow">›</span>
+        </div>
+
+        <div class="account-tile-btn" onclick="closeAccountModal(); openQuotaModal();">
+          <div class="account-tile-left">
+            <span class="account-tile-icon">⚡</span>
+            <div>
+              <strong class="account-tile-title">Status Limit Cloud (Backend)</strong>
+              <span class="account-tile-desc" id="quota-quick-label">Limit: 100% Aman (Free Tier)</span>
+            </div>
+          </div>
+          <span class="account-tile-arrow">›</span>
+        </div>
+
+        <div class="account-tile-btn" onclick="closeAccountModal(); exportPersonalPdf();">
+          <div class="account-tile-left">
+            <span class="account-tile-icon">📄</span>
+            <div>
+              <strong class="account-tile-title">Cetak Rekening Koran (PDF)</strong>
+              <span class="account-tile-desc">Unduh format resmi standar bank</span>
+            </div>
+          </div>
+          <span class="account-tile-arrow">›</span>
+        </div>
+
+        <div class="account-tile-btn" onclick="closeAccountModal(); openGoogleLoginModal();">
+          <div class="account-tile-left">
+            <span class="account-tile-icon">🔑</span>
+            <div>
+              <strong class="account-tile-title">Pilih / Ganti Akun Google</strong>
+              <span class="account-tile-desc">Beralih ke akun email Gmail lain</span>
+            </div>
+          </div>
+          <span class="account-tile-arrow">›</span>
+        </div>
+
+        <a href="landing.html" class="account-tile-btn">
+          <div class="account-tile-left">
+            <span class="account-tile-icon">🌐</span>
+            <div>
+              <strong class="account-tile-title">Website Resmi & Panduan APK</strong>
+              <span class="account-tile-desc">Lihat halaman publik & panduan instalasi</span>
+            </div>
+          </div>
+          <span class="account-tile-arrow">›</span>
+        </a>
+
+        <!-- Logout Button -->
+        <button type="button" class="btn-logout-google" style="margin-top:8px;" onclick="closeAccountModal(); handleGoogleLogout();">
+          <span>🚪</span>
+          <span>Keluar dari Akun (Logout)</span>
+        </button>
+
+        <!-- Dual Window Button for simulation -->
+        <button type="button" id="btn-open-partner-window" class="btn-dual-window" onclick="openDualWindow()">
+          <span>📑</span>
+          <span>Buka Tab Baru (Simulasi Multi-Pengguna)</span>
+        </button>
+
+        <!-- Zero Reset and Demo Simulation in Account Sheet -->
+        <div class="data-manager-card" style="margin-top:8px;">
+          <strong class="data-manager-title">Kelola Data Aplikasi</strong>
+          <div class="data-manager-btns" style="margin-top:8px;">
+            <button type="button" class="btn-reset-clean" onclick="closeAccountModal(); confirmResetAllData();">
+              <span>🗑️ Kosongkan Seluruh Data (Mulai dari Nol)</span>
+            </button>
+            <button type="button" class="btn-load-demo" onclick="closeAccountModal(); confirmLoadDemoData();">
+              <span>⚡ Muat Data Simulasi Keluarga</span>
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -819,7 +922,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE spaces;</code></pre>
     </div>
   </div>
 
-  <!-- Modal 8: Pilihan Login / Masuk Akun Google -->
+  <!-- Modal 8: Pilihan Login / Masuk Akun Google (2 Opsi: Akun Google di HP vs Manual) -->
   <div id="modal-google-login" class="modal-backdrop hidden" onclick="handleBackdropClick(event, 'modal-google-login')">
     <div class="modal-sheet modal-auth">
       <div class="modal-handle"></div>
@@ -829,50 +932,77 @@ ALTER PUBLICATION supabase_realtime ADD TABLE spaces;</code></pre>
             <svg width="22" height="22" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/></svg>
           </div>
           <div>
-            <h3>Masuk dengan Akun Google</h3>
-            <span class="modal-header-sub">Pilih akun Google Anda untuk mengakses buku kas & Google Drive</span>
+            <h3>Masuk Akun Google</h3>
+            <span class="modal-header-sub">Pilih akun Google di HP Anda atau masukkan email manual</span>
           </div>
         </div>
         <button class="modal-close" onclick="closeModal('modal-google-login')">&times;</button>
       </div>
 
       <div class="auth-modal-body">
-        <p class="auth-selection-label">Pilih akun Google yang tersedia di perangkat ini:</p>
-        <div class="google-accounts-picker" id="google-accounts-picker">
-          <!-- Populated via JS with active accounts -->
-        </div>
-
-        <div class="auth-divider">
-          <span>atau masuk dengan akun Google lain</span>
-        </div>
-
-        <form id="form-new-google-account" onsubmit="handleAddNewGoogleAccount(event)" class="add-google-form">
-          <div class="form-group">
-            <label for="login-google-email">Email Google (Gmail) Anda:</label>
-            <div class="input-with-icon">
-              <span class="input-prefix-icon">📧</span>
-              <input type="email" id="login-google-email" class="form-control" placeholder="contoh: akun.saya@gmail.com" required>
-            </div>
+        <!-- OPSI 1: Pilih / Lanjutkan dengan Akun Google yang Ada di HP -->
+        <div class="auth-choice-card">
+          <div class="choice-card-header">
+            <span class="choice-badge">Opsi 1</span>
+            <strong class="choice-title">Pilih Akun Google di HP Anda</strong>
           </div>
-          <div class="form-group">
-            <label for="login-google-name">Nama Panggilan / Tampilan di Aplikasi (Bisa Bebas):</label>
-            <div class="input-with-icon">
-              <span class="input-prefix-icon">👤</span>
-              <input type="text" id="login-google-name" class="form-control" placeholder="Contoh: Ayah / Bunda / Budi">
-            </div>
-            <span class="field-hint">Nama ini yang akan ditampilkan ke keluarga saat berbagi buku kas.</span>
+
+          <!-- Area Akun Google Tersimpan di Perangkat Ini (1-Tap Langsung Masuk) -->
+          <div id="device-accounts-container" class="device-accounts-box">
+            <!-- Rendered dynamically via JS -->
           </div>
-          <button type="submit" class="btn-google-sign-in">
-            <svg width="18" height="18" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/></svg>
-            <span>Masuk dengan Akun Google Ini</span>
+
+          <!-- Tombol One-Tap Deteksi Cepat Akun Google di HP -->
+          <button type="button" class="btn-onetap-google" onclick="triggerGoogleOneTapLogin()">
+            <svg width="22" height="22" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/></svg>
+            <div class="btn-onetap-content">
+              <strong id="btn-onetap-title">Masuk Otomatis dengan Akun Google di HP</strong>
+              <span class="btn-onetap-hint">Langsung masuk tanpa perlu ketik email</span>
+            </div>
+            <span class="onetap-arrow-badge">›</span>
           </button>
-        </form>
+        </div>
+
+        <!-- Pemisah Garis ATAU -->
+        <div class="auth-or-separator">
+          <span class="or-line"></span>
+          <span class="or-text">ATAU</span>
+          <span class="or-line"></span>
+        </div>
+
+        <!-- OPSI 2: Masukkan Email & Nama Manual -->
+        <div class="auth-choice-card">
+          <div class="choice-card-header">
+            <span class="choice-badge badge-manual">Opsi 2</span>
+            <strong class="choice-title">Ketik Email Google & Nama Manual</strong>
+          </div>
+
+          <form id="form-new-google-account" onsubmit="handleAddNewGoogleAccount(event)" class="add-google-form">
+            <div class="form-group">
+              <label for="login-google-email">Email Google (Gmail) Anda:</label>
+              <div class="input-with-icon">
+                <span class="input-prefix-icon">📧</span>
+                <input type="email" id="login-google-email" class="form-control" placeholder="contoh: nama.anda@gmail.com" required>
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="login-google-name">Nama Panggilan / Tampilan:</label>
+              <div class="input-with-icon">
+                <span class="input-prefix-icon">👤</span>
+                <input type="text" id="login-google-name" class="form-control" placeholder="Contoh: Riswan Harun / Ayah" required>
+              </div>
+            </div>
+            <button type="submit" class="btn-submit-manual-login">
+              <span>Masuk dengan Email Ini</span>
+            </button>
+          </form>
+        </div>
 
         <div class="auth-security-box">
           <span class="sec-icon">🔒</span>
           <div>
             <strong>Keamanan & Privasi Terjamin:</strong>
-            <p>SakuKita tidak pernah meminta kata sandi (password) Google Anda. Login ini menghubungkan profil identitas dan Google Drive pribadi Anda secara terenkripsi.</p>
+            <p>SakuKita tidak pernah meminta kata sandi (password) Google Anda. Catatan keuangan Anda selalu tersimpan aman dan tidak akan hilang saat logout.</p>
           </div>
         </div>
       </div>
