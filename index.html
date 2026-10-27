@@ -177,13 +177,12 @@
             <div class="action-circle-icon bg-purple">👥</div>
             <span class="action-circle-label">Keluarga</span>
           </button>
-          <button type="button" class="quick-action-circle-btn action-btn-sheets" onclick="openGoogleSheetsModal()"
-            title="Buka Integrasi Google Sheets">
+          <button type="button" class="quick-action-circle-btn action-btn-download" onclick="openDownloadModal()"
+            title="Pusat Unduh Laporan Keuangan">
             <div class="action-circle-icon bg-green">
-              📊
-              <span id="sheets-action-badge-dot" class="action-badge-dot"></span>
+              📥
             </div>
-            <span class="action-circle-label">Sheets</span>
+            <span class="action-circle-label">Unduh</span>
           </button>
         </div>
       </section>
@@ -649,7 +648,7 @@
     </div>
   </div>
 
-  <!-- Modal 3: Hub Integrasi & Auto-Sync Google Sheets -->
+  <!-- Modal 3: Hub Koneksi Khusus Google Spreadsheet (Auto-Sync Webhook) -->
   <div id="modal-sheets" class="modal-backdrop hidden" onclick="handleBackdropClick(event, 'modal-sheets')">
     <div class="modal-sheet modal-large">
       <div class="modal-handle"></div>
@@ -657,148 +656,67 @@
         <div class="modal-header-title-row">
           <span class="gsheets-header-icon">📊</span>
           <div>
-            <h3 id="gsheets-modal-title">Google Spreadsheet Pribadi</h3>
-            <span class="modal-header-sub" id="gsheets-modal-user-subtitle">Spreadsheet khusus akun: ...</span>
+            <h3 id="gsheets-modal-title">Koneksi Google Spreadsheet</h3>
+            <span class="modal-header-sub" id="gsheets-modal-user-subtitle">Sinkronisasi otomatis mutasi transaksi
+              secara real-time</span>
           </div>
         </div>
         <button class="modal-close" onclick="closeModal('modal-sheets')">&times;</button>
       </div>
 
       <div class="sheets-modal-content">
-        <!-- Isolation & Privacy Guarantee Card -->
-        <div class="gsheets-isolation-banner">
-          <span class="isolation-icon">🔒</span>
-          <div class="isolation-text">
-            <strong>Terpisah & Terisolasi Penuh per Akun:</strong>
-            <p>File spreadsheet ini <b>khusus untuk akun <span id="gsheets-banner-user">...</span></b>. Ketika Anda
-              mengunduh CSV atau melakukan auto-sync, <b>HANYA data transaksi pribadi milik akun ini</b> yang
-              dimasukkan. Data dari akun lain tidak akan pernah bercampur.</p>
-          </div>
-        </div>
-
         <!-- Status & Auto Connection Card -->
         <div class="gsheets-status-card">
           <div class="gsheets-status-top">
             <div class="gsheets-status-info">
               <span class="gsheets-status-dot"></span>
-              <strong>Status: Terhubung Otomatis ke Google Drive</strong>
+              <strong>Status: Sinkronisasi Google Sheets</strong>
             </div>
-            <span class="gsheets-badge-live">Otomatis Aktif</span>
+            <span class="gsheets-badge-live">Memeriksa...</span>
           </div>
           <p class="gsheets-status-desc" id="gsheets-status-desc-text">
-            Spreadsheet pribadi untuk akun <b>...</b> terhubung otomatis. Setiap mutasi transaksi langsung tersinkron
-            rapi tanpa perlu input link manual.
+            Masukkan URL Webhook Google Apps Script di bawah agar setiap transaksi otomatis tercatat di Google
+            Spreadsheet Anda.
           </p>
           <button type="button" id="btn-test-webhook-sync" class="btn-test-webhook hidden"
             onclick="testGoogleSheetsWebhook()">
             <span>🧪 Uji Coba Kirim Data Tes ke Google Spreadsheet</span>
           </button>
-          <div class="gsheets-actions-bar">
-            <button class="btn-gsheets-primary btn-pdf-action" onclick="exportPersonalPdf()"
-              title="Unduh Laporan Mutasi format PDF resmi">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                <polyline points="14 2 14 8 20 8" />
-                <line x1="16" y1="13" x2="8" y2="13" />
-                <line x1="16" y1="17" x2="8" y2="17" />
-              </svg>
-              <span>Unduh E-Statement (PDF Bank)</span>
-            </button>
-            <button class="btn-gsheets-secondary" onclick="exportPersonalCsv()"
-              title="Unduh data dalam format CSV / Excel">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                <polyline points="7 10 12 15 17 10" />
-                <line x1="12" y1="15" x2="12" y2="3" />
-              </svg>
-              <span id="btn-export-personal-text">📲 Buka di Google Spreadsheet HP / CSV</span>
-            </button>
-            <button class="btn-gsheets-copy" onclick="copyTableForGoogleSheets()"
-              title="Salin seluruh data lengkap untuk ditempel di Google Sheets">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-              </svg>
-              <span>📋 Salin Data (1-Klik Siap Paste di Sheets)</span>
-            </button>
-            <a id="btn-open-spreadsheet-link" href="#" target="_blank" class="btn-gsheets-secondary"
-              onclick="handleAutoSheetOpen(event)">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-                <polyline points="15 3 21 3 21 9" />
-                <line x1="10" y1="14" x2="21" y2="3" />
-              </svg>
-              <span>Buka Google Sheets ↗</span>
-            </a>
-          </div>
-
-          <!-- Quick 3-Step Guide for Google Sheets -->
-          <div class="gsheets-quick-guide-box">
-            <div class="guide-step-item">
-              <span class="guide-num">1</span>
-              <span>Klik <b>Salin Data</b></span>
-            </div>
-            <div class="guide-step-arrow">➔</div>
-            <div class="guide-step-item">
-              <span class="guide-num">2</span>
-              <span>Klik <b>Buka Sheets ↗</b></span>
-            </div>
-            <div class="guide-step-arrow">➔</div>
-            <div class="guide-step-item">
-              <span class="guide-num">3</span>
-              <span>Klik kotak <b>A1</b> lalu <b>Tempel / Paste</b></span>
-            </div>
-          </div>
         </div>
 
-        <!-- Automatic Google Drive Details Card -->
-        <div class="settings-block auto-drive-card">
-          <div class="auto-drive-header">
-            <span class="auto-drive-icon">📁</span>
-            <div>
-              <h4 class="settings-block-title" style="margin-bottom:2px">Penyimpanan Otomatis Google Drive</h4>
-              <span class="field-hint" style="margin-top:0">Tersimpan di Google Drive pribadi akun: <b
-                  id="auto-drive-email" style="color:#60a5fa">...</b></span>
-            </div>
-          </div>
-          <div class="auto-drive-meta-rows">
-            <div class="drive-meta-item">
-              <span>Nama Dokumen:</span>
-              <strong id="auto-drive-docname">SakuKita - Mutasi Keuangan Pribadi</strong>
-            </div>
-            <div class="drive-meta-item">
-              <span>Sifat Data:</span>
-              <span class="badge-private-pill">100% Privat (Hanya Anda)</span>
-            </div>
-          </div>
-          <button type="button" class="btn-create-sheet-now" onclick="createSpreadsheetInGoogleDrive()">
-            <span>⚡ Buat / Buka Otomatis Lembar Kerja di Google Drive Saya</span>
-          </button>
-        </div>
-
-        <!-- Collapsible Custom URL / Webhook Settings (Optional) -->
-        <details class="settings-block custom-settings-accordion">
-          <summary class="accordion-summary">
-            <span>⚙️ Pengaturan Lanjutan: URL Kustom / Webhook (Opsional)</span>
-            <span class="accordion-arrow">▼</span>
-          </summary>
-          <form id="form-sheets-config" onsubmit="handleSaveSheetsConfig(event)" style="margin-top: 14px;">
-            <div class="form-group">
-              <label for="cfg-sheet-url">URL Kustom Google Spreadsheet (Jika punya file sendiri):</label>
-              <input type="url" id="cfg-sheet-url" class="form-control"
-                placeholder="https://docs.google.com/spreadsheets/d/...">
-            </div>
-
-            <div class="form-group">
-              <label for="cfg-webhook-url">URL Webhook Google Apps Script (Opsional):</label>
+        <!-- Form Sambungkan Webhook (Langsung Terbuka & Jelas) -->
+        <div class="settings-block" style="margin-top: 12px;">
+          <h4 class="settings-block-title" style="margin-bottom: 8px;">🔗 Sambungkan Webhook Google Sheets</h4>
+          <form id="form-sheets-config" onsubmit="handleSaveSheetsConfig(event)">
+            <div class="form-group" style="margin-bottom: 12px;">
+              <label for="cfg-webhook-url" style="display:flex; justify-content:space-between; align-items:center;">
+                <span>URL Webhook Google Apps Script:</span>
+                <span class="field-hint" style="margin:0; font-size:0.75rem; color:#60a5fa;">Wajib berakhiran
+                  /exec</span>
+              </label>
               <input type="url" id="cfg-webhook-url" class="form-control"
-                placeholder="https://script.google.com/macros/s/.../exec">
+                placeholder="https://script.google.com/macros/s/.../exec" required
+                style="font-size:0.85rem; padding: 10px 12px;">
+              <span class="field-hint" style="margin-top:4px; font-size:0.72rem; color:var(--text-muted);">
+                Dapatkan URL ini setelah klik <b>Deploy (Terapkan)</b> &gt; <b>Penerapan Baru</b> di Google Apps Script.
+              </span>
             </div>
 
-            <div class="toggle-row">
+            <!-- Optional Custom Sheet URL -->
+            <div class="form-group" style="margin-bottom: 12px;">
+              <label for="cfg-sheet-url" style="font-size:0.8rem; color:var(--text-secondary);">
+                Link Google Spreadsheet Anda (Opsional):
+              </label>
+              <input type="url" id="cfg-sheet-url" class="form-control"
+                placeholder="https://docs.google.com/spreadsheets/d/..." style="font-size:0.85rem; padding: 9px 12px;">
+            </div>
+
+            <div class="toggle-row"
+              style="margin-bottom: 14px; padding: 10px 12px; background: rgba(255,255,255,0.03); border-radius: 8px;">
               <div>
-                <strong>Auto-Sync Saat Ada Aktivitas</strong>
-                <p>Kirim update seketika ke Google Sheets setiap kali transaksi dicatat atau dihapus.</p>
+                <strong style="font-size:0.85rem;">Auto-Sync Real-Time</strong>
+                <p style="font-size:0.75rem; color:var(--text-muted); margin:0;">Kirim mutasi seketika setiap kali
+                  transaksi dicatat atau dihapus.</p>
               </div>
               <label class="switch">
                 <input type="checkbox" id="cfg-autosync-toggle" checked>
@@ -806,44 +724,25 @@
               </label>
             </div>
 
-            <button type="submit" class="btn-save-settings">Simpan Pengaturan Kustom</button>
+            <button type="submit" class="btn-save-settings"
+              style="width:100%; padding: 12px; font-weight:700; background:linear-gradient(135deg, #10b981, #059669);">
+              💾 Simpan & Sambungkan Webhook
+            </button>
           </form>
-        </details>
-
-        <!-- Live Synced Data Preview (Google Sheets Table Look) -->
-        <div class="settings-block">
-          <div class="sheets-preview-header">
-            <h4 class="settings-block-title">Pratinjau Data Ter-Sync Terbaru (Format Kolom Spreadsheet)</h4>
-            <span class="preview-count-tag" id="preview-row-count">0 Baris Terdata</span>
-          </div>
-          <div class="sheets-table-wrapper">
-            <table class="sheets-table" id="sheets-preview-table">
-              <thead>
-                <tr>
-                  <th>No</th>
-                  <th>Tanggal Mutasi</th>
-                  <th>Keterangan</th>
-                  <th>Kategori</th>
-                  <th>Dompet</th>
-                  <th>Debet (DB)</th>
-                  <th>Kredit (CR)</th>
-                  <th>Saldo Berjalan</th>
-                </tr>
-              </thead>
-              <tbody id="sheets-preview-tbody">
-                <!-- Populated dynamically -->
-              </tbody>
-            </table>
-          </div>
         </div>
 
-        <!-- Free Google Apps Script Template Instructions -->
-        <div class="settings-block">
-          <h4 class="settings-block-title">Script Gratis Google Apps Script (1-Click Setup)</h4>
-          <p class="script-instruction-text">
-            Ingin menghubungkan Google Spreadsheet Anda secara langsung? Buka Google Sheets Anda > menu <b>Ekstensi</b>
-            > <b>Apps Script</b>, lalu tempel kode berikut dan klik <b>Deploy as Web App</b>:
-          </p>
+        <!-- Panduan & Script Gratis Google Apps Script -->
+        <div class="settings-block" style="margin-top: 14px;">
+          <h4 class="settings-block-title" style="margin-bottom: 6px;">📖 Panduan 3 Langkah Sambungkan Sheets</h4>
+          <div style="font-size: 0.8rem; color: var(--text-secondary); line-height: 1.5; margin-bottom: 12px;">
+            <p style="margin: 0 0 6px 0;">1. Buka file Google Sheets Anda di browser &gt; pilih menu <b>Ekstensi</b>
+              &gt; <b>Apps Script</b>.</p>
+            <p style="margin: 0 0 6px 0;">2. Hapus kode yang ada, tempel kode di bawah ini, lalu klik <b>Deploy
+                (Terapkan)</b> &gt; <b>Penerapan baru</b>.</p>
+            <p style="margin: 0 0 6px 0;">3. Pilih jenis: <b>Aplikasi Web</b>, Jalankan sebagai: <b>Saya</b>, Akses:
+              <b>Siapa saja</b>, lalu salin URL Webhook dan tempel di formulir atas.</p>
+          </div>
+
           <div class="code-block-wrapper">
             <pre><code id="apps-script-code">function doPost(e) {
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
@@ -878,6 +777,74 @@
 }</code></pre>
             <button class="btn-copy-code" onclick="copyAppsScriptCode()">📋 Salin Kode Apps Script</button>
           </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Pusat Unduh Laporan Keuangan (Khusus 4 Menu Unduh) -->
+  <div id="modal-download" class="modal-backdrop hidden" onclick="handleBackdropClick(event, 'modal-download')">
+    <div class="modal-sheet">
+      <div class="modal-handle"></div>
+      <div class="modal-header">
+        <div class="modal-header-title-row">
+          <span class="gsheets-header-icon" style="background: rgba(16, 185, 129, 0.15); color: #34d399;">📥</span>
+          <div>
+            <h3>Pusat Unduh Laporan</h3>
+            <span class="modal-header-sub">Unduh atau buka mutasi keuangan Anda</span>
+          </div>
+        </div>
+        <button class="modal-close" onclick="closeModal('modal-download')">&times;</button>
+      </div>
+
+      <div class="sheets-modal-content">
+        <div class="download-options-list">
+          <!-- 1. Unduh E-Statement (PDF Bank) -->
+          <button type="button" class="download-option-card"
+            onclick="closeModal('modal-download'); exportPersonalPdf();" title="Unduh Rekening Koran PDF">
+            <div class="download-opt-icon bg-pdf">📄</div>
+            <div class="download-opt-info">
+              <span class="download-opt-title">Unduh E-Statement (PDF Bank)</span>
+              <span class="download-opt-desc">Laporan mutasi rekening koran resmi standar perbankan (A4 rapi).</span>
+            </div>
+            <span class="download-opt-arrow">➔</span>
+          </button>
+
+          <!-- 2. Unduh Mutasi Bank (Format CSV / Excel) -->
+          <button type="button" class="download-option-card"
+            onclick="closeModal('modal-download'); exportPersonalCsv();" title="Unduh Format CSV / Excel">
+            <div class="download-opt-icon bg-csv">📥</div>
+            <div class="download-opt-info">
+              <span class="download-opt-title">Unduh Mutasi Bank (Format CSV / Excel)</span>
+              <span class="download-opt-desc">File tabel transaksi lengkap, langsung terbuka di HP atau aplikasi
+                spreadsheet.</span>
+            </div>
+            <span class="download-opt-arrow">➔</span>
+          </button>
+
+          <!-- 3. Salin Data (1-Klik Siap Paste di Sheets) -->
+          <button type="button" class="download-option-card"
+            onclick="closeModal('modal-download'); copyTableForGoogleSheets();" title="Salin Data ke Clipboard">
+            <div class="download-opt-icon bg-copy">📋</div>
+            <div class="download-opt-info">
+              <span class="download-opt-title">Salin Data (1-Klik Siap Paste di Sheets)</span>
+              <span class="download-opt-desc">Salin semua mutasi ke clipboard, tinggal buka Sheets lalu tempel di kotak
+                A1.</span>
+            </div>
+            <span class="download-opt-arrow">➔</span>
+          </button>
+
+          <!-- 4. Buka Google Spreadsheet -->
+          <button type="button" class="download-option-card"
+            onclick="closeModal('modal-download'); handleAutoSheetOpen(event);" title="Buka Spreadsheet">
+            <div class="download-opt-icon bg-sheets">↗️</div>
+            <div class="download-opt-info">
+              <span class="download-opt-title">Buka Google Spreadsheet</span>
+              <span class="download-opt-desc">Buka dokumen Google Spreadsheet mutasi Anda langsung di browser atau
+                aplikasi.</span>
+            </div>
+            <span class="download-opt-arrow">➔</span>
+          </button>
         </div>
       </div>
     </div>

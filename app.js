@@ -361,6 +361,19 @@ function loadData() {
     const firstUserId = Object.keys(users)[0];
     if (firstUserId) activeUserId = firstUserId;
   }
+
+  // Guaranteed Permanent Webhook Persistence (Survives any refresh or data switch)
+  const globalWebhook = localStorage.getItem('sakukita_global_webhook_url');
+  Object.keys(users).forEach(uid => {
+    const savedWebhook = localStorage.getItem('sakukita_webhook_url_' + uid) || globalWebhook;
+    if (!users[uid].webhookUrl && savedWebhook) {
+      users[uid].webhookUrl = savedWebhook;
+    }
+    const savedSheet = localStorage.getItem('sakukita_sheet_url_' + uid);
+    if (!users[uid].googleSheetUrl && savedSheet) {
+      users[uid].googleSheetUrl = savedSheet;
+    }
+  });
 }
 
 function saveUsers() {
@@ -540,12 +553,13 @@ function renderActiveUserProfile() {
 
 function updateGoogleSheetsSyncIndicators() {
   const user = getActiveUser();
-  const isConnected = !!(user.webhookUrl && user.webhookUrl.startsWith('http') && user.autoSyncEnabled !== false);
+  const webhook = user.webhookUrl || localStorage.getItem('sakukita_webhook_url_' + user.id) || localStorage.getItem('sakukita_global_webhook_url') || '';
+  const isConnected = !!(webhook && webhook.startsWith('http') && user.autoSyncEnabled !== false);
 
   const badgePill = document.getElementById('sheets-sync-status-badge');
   const badgeText = document.getElementById('sheets-sync-status-text');
   const actionDot = document.getElementById('sheets-action-badge-dot');
-  const modalBadgeLive = document.querySelector('.gsheets-badge-live');
+  const modalBadgeLive = document.querySelector('#modal-sheets .gsheets-badge-live') || document.querySelector('.gsheets-badge-live');
   const modalDesc = document.getElementById('gsheets-status-desc-text');
   const testBtn = document.getElementById('btn-test-webhook-sync');
 
@@ -583,9 +597,9 @@ function updateGoogleSheetsSyncIndicators() {
 
   if (modalDesc) {
     if (isConnected) {
-      modalDesc.innerHTML = `✅ <b>Koneksi Webhook Aktif:</b> Setiap kali Anda mencatat pengeluaran atau pemasukan di APK SakuKita, transaksi otomatis langsung masuk ke Google Spreadsheet Anda secara seketika (real-time).`;
+      modalDesc.innerHTML = `✅ <b>Koneksi Webhook Aktif:</b> Setiap kali Anda mencatat pengeluaran atau pemasukan di APK SakuKita, data langsung otomatis masuk ke Google Spreadsheet Anda secara seketika (real-time).`;
     } else {
-      modalDesc.innerHTML = `⚠️ <b>Belum Terhubung:</b> Masukkan URL Webhook Google Apps Script di menu <i>⚙️ Pengaturan Lanjutan</i> di bawah agar mutasi transaksi otomatis terisi sendiri ke Google Sheets.`;
+      modalDesc.innerHTML = `⚠️ <b>Belum Terhubung:</b> Masukkan URL Webhook Google Apps Script di formulir bawah lalu klik <b>Simpan & Sambungkan Webhook</b> agar transaksi otomatis tersinkron ke Google Sheets.`;
     }
   }
 
@@ -600,15 +614,16 @@ function updateGoogleSheetsSyncIndicators() {
 
 function testGoogleSheetsWebhook() {
   const activeUser = getActiveUser();
-  if (!activeUser.webhookUrl || !activeUser.webhookUrl.startsWith('http')) {
-    showLiveToast('⚠️ Belum Ada Webhook', 'Silakan tempel URL Webhook Google Apps Script di Pengaturan Lanjutan terlebih dahulu.');
+  const webhook = activeUser.webhookUrl || localStorage.getItem('sakukita_webhook_url_' + activeUser.id) || localStorage.getItem('sakukita_global_webhook_url') || '';
+  if (!webhook || !webhook.startsWith('http')) {
+    showLiveToast('⚠️ Belum Ada Webhook', 'Silakan tempel URL Webhook Google Apps Script di formulir bawah terlebih dahulu.');
     return;
   }
 
   showLiveToast('🚀 Mengirim Tes...', 'Sedang mengirim baris uji coba ke Google Spreadsheet Anda...');
 
   try {
-    fetch(activeUser.webhookUrl, {
+    fetch(webhook, {
       method: 'POST',
       mode: 'no-cors',
       headers: { 'Content-Type': 'application/json' },
@@ -1442,9 +1457,10 @@ function triggerGoogleSheetsAutoSync(tx, actionType, space) {
   localStorage.setItem(storageKey, JSON.stringify(syncHistory));
 
   // If user configured real Google Apps Script Webhook URL, send real HTTP POST
-  if (activeUser.webhookUrl && activeUser.webhookUrl.startsWith('http')) {
+  const webhook = activeUser.webhookUrl || localStorage.getItem('sakukita_webhook_url_' + activeUser.id) || localStorage.getItem('sakukita_global_webhook_url') || '';
+  if (webhook && webhook.startsWith('http')) {
     try {
-      fetch(activeUser.webhookUrl, {
+      fetch(webhook, {
         method: 'POST',
         mode: 'no-cors',
         headers: { 'Content-Type': 'application/json' },
@@ -1477,29 +1493,62 @@ function triggerGoogleSheetsAutoSync(tx, actionType, space) {
   }
 }
 
+function openDownloadModal() {
+  const modal = document.getElementById('modal-download');
+  if (modal) modal.classList.remove('hidden');
+}
+
 function openGoogleSheetsModal() {
   const activeUser = getActiveUser();
   renderActiveUserProfile();
 
-  document.getElementById('cfg-sheet-url').value = activeUser.googleSheetUrl || '';
-  document.getElementById('cfg-webhook-url').value = activeUser.webhookUrl || '';
-  document.getElementById('cfg-autosync-toggle').checked = activeUser.autoSyncEnabled !== false;
+  const sheetInput = document.getElementById('cfg-sheet-url');
+  if (sheetInput) {
+    sheetInput.value = activeUser.googleSheetUrl || localStorage.getItem('sakukita_sheet_url_' + activeUser.id) || '';
+  }
+  const webhookInput = document.getElementById('cfg-webhook-url');
+  if (webhookInput) {
+    webhookInput.value = activeUser.webhookUrl || localStorage.getItem('sakukita_webhook_url_' + activeUser.id) || localStorage.getItem('sakukita_global_webhook_url') || '';
+  }
+  const toggleInput = document.getElementById('cfg-autosync-toggle');
+  if (toggleInput) {
+    toggleInput.checked = activeUser.autoSyncEnabled !== false;
+  }
 
+  updateGoogleSheetsSyncIndicators();
   renderSheetsTablePreview();
-  document.getElementById('modal-sheets').classList.remove('hidden');
+  const modal = document.getElementById('modal-sheets');
+  if (modal) modal.classList.remove('hidden');
 }
 
 function handleSaveSheetsConfig(e) {
   e.preventDefault();
   const activeUser = getActiveUser();
-  activeUser.googleSheetUrl = document.getElementById('cfg-sheet-url').value.trim();
-  activeUser.webhookUrl = document.getElementById('cfg-webhook-url').value.trim();
-  activeUser.autoSyncEnabled = document.getElementById('cfg-autosync-toggle').checked;
+  const sheetUrl = document.getElementById('cfg-sheet-url') ? document.getElementById('cfg-sheet-url').value.trim() : '';
+  const webhookUrl = document.getElementById('cfg-webhook-url') ? document.getElementById('cfg-webhook-url').value.trim() : '';
+  const autoSync = document.getElementById('cfg-autosync-toggle') ? document.getElementById('cfg-autosync-toggle').checked : true;
+
+  activeUser.googleSheetUrl = sheetUrl;
+  activeUser.webhookUrl = webhookUrl;
+  activeUser.autoSyncEnabled = autoSync;
+
+  // Guaranteed Permanent Webhook Persistence (Survives any refresh or data switch)
+  if (webhookUrl) {
+    localStorage.setItem('sakukita_webhook_url_' + activeUser.id, webhookUrl);
+    localStorage.setItem('sakukita_global_webhook_url', webhookUrl);
+  } else {
+    localStorage.removeItem('sakukita_webhook_url_' + activeUser.id);
+    localStorage.removeItem('sakukita_global_webhook_url');
+  }
+  if (sheetUrl) {
+    localStorage.setItem('sakukita_sheet_url_' + activeUser.id, sheetUrl);
+  }
 
   saveUsers();
   renderActiveUserProfile();
+  updateGoogleSheetsSyncIndicators();
   closeModal('modal-sheets');
-  showLiveToast('📊 Pengaturan Disimpan', `Spreadsheet pribadi ${activeUser.name} berhasil diperbarui.`);
+  showLiveToast('⚡ Webhook Tersimpan!', `Koneksi Google Spreadsheet untuk ${activeUser.name} berhasil tersambung.`);
 }
 
 function renderSheetsTablePreview() {
@@ -1683,13 +1732,14 @@ function createSpreadsheetInGoogleDrive() {
 }
 
 function handleAutoSheetOpen(e) {
+  if (e && e.preventDefault) e.preventDefault();
   const activeUser = getActiveUser();
-  if (activeUser.googleSheetUrl && activeUser.googleSheetUrl.startsWith('http') && !activeUser.googleSheetUrl.includes('_Spreadsheet_Pribadi')) {
-    // If user specified custom link, let default link action proceed
+  const sheetUrl = activeUser.googleSheetUrl || localStorage.getItem('sakukita_sheet_url_' + activeUser.id);
+  if (sheetUrl && sheetUrl.startsWith('http') && !sheetUrl.includes('_Spreadsheet_Pribadi')) {
+    window.open(sheetUrl, '_blank');
     return;
   }
   // Otherwise open direct automated Drive sheet
-  e.preventDefault();
   createSpreadsheetInGoogleDrive();
 }
 

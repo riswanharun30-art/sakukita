@@ -1,5 +1,5 @@
 // SakuKita Service Worker - Offline Caching & PWA Ready
-const CACHE_NAME = 'sakukita-cache-v11-sheets-indicator';
+const CACHE_NAME = 'sakukita-cache-v12-split-modals';
 const ASSETS = [
   './',
   './index.html',
