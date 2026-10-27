@@ -583,6 +583,11 @@ function updateGoogleSheetsSyncIndicators() {
     }
   }
 
+  const quickSyncLabel = document.getElementById('quick-action-sync-label');
+  if (quickSyncLabel) {
+    quickSyncLabel.textContent = isConnected ? 'Sinkron ✅' : 'Sinkron';
+  }
+
   if (modalBadgeLive) {
     if (isConnected) {
       modalBadgeLive.textContent = '⚡ Terhubung Otomatis';
@@ -622,6 +627,20 @@ function testGoogleSheetsWebhook() {
 
   showLiveToast('🚀 Mengirim Tes...', 'Sedang mengirim baris uji coba ke Google Spreadsheet Anda...');
 
+  const activeSpace = getActiveSpace() || { name: 'Buku Kas Utama', wallets: [], transactions: [] };
+  let testIncome = 0;
+  let testExpense = 0;
+  if (activeSpace.transactions) {
+    activeSpace.transactions.forEach(t => {
+      if (t.type === 'INCOME') testIncome += Number(t.amount);
+      else if (t.type === 'EXPENSE') testExpense += Number(t.amount);
+    });
+  }
+  const testBalance = activeSpace.wallets ? activeSpace.wallets.reduce((s, w) => s + Number(w.balance), 0) : 0;
+  const testWallets = activeSpace.wallets && activeSpace.wallets.length > 0 
+    ? activeSpace.wallets.map(w => `${w.name}: ${formatRupiah(w.balance)}`).join(' | ') 
+    : 'Dompet Utama: Rp 0';
+
   try {
     fetch(webhook, {
       method: 'POST',
@@ -631,13 +650,17 @@ function testGoogleSheetsWebhook() {
         action: 'TEST',
         userName: activeUser.name,
         userEmail: activeUser.email,
-        spaceName: getActiveSpace()?.name || 'SakuKita',
+        spaceName: activeSpace.name || 'Buku Kas Utama',
         type: 'INCOME',
         category: 'Uji Koneksi',
         amount: 0,
         amountFormatted: 'Rp 0 (Tes)',
         walletName: 'Sistem',
         note: '🎉 Koneksi Auto-Sync SakuKita Berhasil!',
+        totalIncomeFormatted: formatRupiah(testIncome),
+        totalExpenseFormatted: formatRupiah(testExpense),
+        totalBalanceFormatted: formatRupiah(testBalance),
+        walletsSummary: testWallets,
         timestamp: new Date().toLocaleString('id-ID') + ' WIB'
       })
     }).then(() => {
@@ -715,10 +738,10 @@ function updateSpaceSelectorUI() {
   if (collabBtn) {
     if (isOwner) {
       collabBtn.innerHTML = `<span>🤝</span><span>Kelola Izin Pantau</span>`;
-      collabBtn.className = 'btn-collab';
+      collabBtn.className = 'btn-collab btn-collab-capsule';
     } else {
       collabBtn.innerHTML = `<span>👁️</span><span>Info Hak Pantau</span>`;
-      collabBtn.className = 'btn-collab';
+      collabBtn.className = 'btn-collab btn-collab-capsule';
     }
   }
 }
@@ -1459,6 +1482,20 @@ function triggerGoogleSheetsAutoSync(tx, actionType, space) {
   // If user configured real Google Apps Script Webhook URL, send real HTTP POST
   const webhook = activeUser.webhookUrl || localStorage.getItem('sakukita_webhook_url_' + activeUser.id) || localStorage.getItem('sakukita_global_webhook_url') || '';
   if (webhook && webhook.startsWith('http')) {
+    // Calculate comprehensive financial snapshot for space
+    let totalIncome = 0;
+    let totalExpense = 0;
+    if (space.transactions) {
+      space.transactions.forEach(t => {
+        if (t.type === 'INCOME') totalIncome += Number(t.amount);
+        else if (t.type === 'EXPENSE') totalExpense += Number(t.amount);
+      });
+    }
+    const totalBalance = space.wallets ? space.wallets.reduce((s, w) => s + Number(w.balance), 0) : 0;
+    const walletsSummary = space.wallets && space.wallets.length > 0
+      ? space.wallets.map(w => `${w.name}: ${formatRupiah(w.balance)}`).join(' | ')
+      : '-';
+
     try {
       fetch(webhook, {
         method: 'POST',
@@ -1468,13 +1505,17 @@ function triggerGoogleSheetsAutoSync(tx, actionType, space) {
           action: actionType,
           userName: activeUser.name,
           userEmail: activeUser.email,
-          spaceName: space.name,
+          spaceName: space.name || 'Buku Kas Utama',
           type: tx.type,
           category: tx.category,
           amount: tx.amount,
           amountFormatted: formatRupiah(tx.amount),
           walletName: wallet.name,
-          note: tx.note,
+          note: (actionType === 'DELETE' ? '[DIHAPUS] ' : '') + tx.note,
+          totalIncomeFormatted: formatRupiah(totalIncome),
+          totalExpenseFormatted: formatRupiah(totalExpense),
+          totalBalanceFormatted: formatRupiah(totalBalance),
+          walletsSummary: walletsSummary,
           timestamp: new Date().toLocaleString('id-ID') + ' WIB'
         })
       }).catch(err => console.log('Webhook dispatched'));
@@ -3031,4 +3072,23 @@ function copySqlCode() {
   navigator.clipboard.writeText(code).then(() => {
     alert('✅ Script SQL Supabase berhasil disalin ke clipboard!');
   });
+}
+
+function copyAppsScriptCode() {
+  const codeEl = document.getElementById('apps-script-code');
+  if (!codeEl) return;
+  const code = codeEl.innerText || codeEl.textContent;
+
+  const copyDone = () => {
+    if (navigator.vibrate) navigator.vibrate([40]);
+    showLiveToast('📋 Script Berhasil Disalin!', 'Buka Google Sheets di laptop/HP > Ekstensi > Apps Script, lalu tempel kode (Ctrl+V).');
+  };
+
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(code).then(copyDone).catch(() => {
+      fallbackCopy(code, copyDone);
+    });
+  } else {
+    fallbackCopy(code, copyDone);
+  }
 }
