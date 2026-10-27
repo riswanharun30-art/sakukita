@@ -708,6 +708,40 @@ body {
   white-space: nowrap;
 }
 
+/* Viewer Mode Locked Quick Action Buttons */
+.quick-action-circle-btn.btn-viewer-locked {
+  opacity: 0.45;
+  filter: grayscale(0.8);
+  cursor: not-allowed;
+}
+
+.quick-action-circle-btn.btn-viewer-locked .action-circle-icon {
+  background: #334155 !important;
+  box-shadow: none;
+  border-color: rgba(255, 255, 255, 0.1);
+  position: relative;
+}
+
+.quick-action-circle-btn.btn-viewer-locked .action-circle-icon::after {
+  content: '🔒';
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  font-size: 0.65rem;
+  background: #0f172a;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.quick-action-circle-btn.btn-viewer-locked .action-circle-label {
+  color: #94a3b8;
+}
+
 /* Monthly Budget Section */
 .budget-fintech-card {
   background: var(--bg-card);
@@ -716,6 +750,32 @@ body {
   padding: 12px 14px;
   cursor: pointer;
   transition: all 0.2s ease;
+}
+
+.budget-fintech-card.budget-card-locked {
+  cursor: default;
+}
+
+.budget-fintech-card.budget-card-locked:hover {
+  border-color: var(--border-subtle);
+  background: var(--bg-card);
+  box-shadow: none;
+}
+
+.budget-fintech-card.budget-card-locked .budget-edit-badge {
+  display: none !important;
+}
+
+.user-pill.user-pill-monitored {
+  border: 1px dashed rgba(59, 130, 246, 0.4);
+  background: rgba(30, 41, 59, 0.6);
+}
+
+.user-pill.user-pill-monitored.active {
+  background: linear-gradient(135deg, #1e40af, #2563eb);
+  border-style: solid;
+  border-color: #60a5fa;
+  box-shadow: 0 2px 10px rgba(37, 99, 235, 0.35);
 }
 
 .budget-fintech-card:hover {

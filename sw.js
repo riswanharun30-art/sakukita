@@ -1,5 +1,5 @@
 // SakuKita Service Worker - Offline Caching & PWA Ready
-const CACHE_NAME = 'sakukita-cache-v26-floating-login-restore';
+const CACHE_NAME = 'sakukita-cache-v28-viewer-lockdown-alias-persist';
 const ASSETS = [
   './',
   './index.html',

@@ -6,12 +6,14 @@ const DEFAULT_USERS = {
   user_1: {
     id: 'user_1',
     name: 'Pengguna SakuKita',
+    originalName: 'Pengguna SakuKita',
     email: '',
     avatar: '👤',
     color: '#3b82f6',
     googleSheetUrl: '',
     webhookUrl: '',
-    autoSyncEnabled: true
+    autoSyncEnabled: true,
+    isRemoteOwner: false
   }
 };
 
@@ -434,6 +436,59 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 
+// Permanent Custom Aliases Store (Persists viewer renames across refresh & cloud sync)
+function getSpaceAliases() {
+  try {
+    const raw = localStorage.getItem('sakukita_space_aliases_v1');
+    return raw ? JSON.parse(raw) : {};
+  } catch (e) {
+    return {};
+  }
+}
+
+function saveSpaceAlias(spaceId, spaceName, ownerNickname, ownerId) {
+  if (!spaceId) return;
+  try {
+    const aliases = getSpaceAliases();
+    aliases[spaceId] = {
+      spaceName: spaceName || '',
+      ownerNickname: ownerNickname || '',
+      ownerId: ownerId || '',
+      updatedAt: Date.now()
+    };
+    localStorage.setItem('sakukita_space_aliases_v1', JSON.stringify(aliases));
+  } catch (e) {
+    console.warn('Failed to save space alias', e);
+  }
+}
+
+function removeSpaceAlias(spaceId) {
+  if (!spaceId) return;
+  try {
+    const aliases = getSpaceAliases();
+    delete aliases[spaceId];
+    localStorage.setItem('sakukita_space_aliases_v1', JSON.stringify(aliases));
+  } catch (e) {}
+}
+
+function applySavedSpaceAliases() {
+  const aliases = getSpaceAliases();
+  if (!aliases || typeof aliases !== 'object') return;
+  Object.keys(aliases).forEach(sId => {
+    const alias = aliases[sId];
+    if (!alias) return;
+    const space = spaces[sId] || Object.values(spaces).find(s => s.originalSpaceId === sId);
+    if (space) {
+      if (alias.spaceName) space.name = alias.spaceName;
+      const oId = alias.ownerId || space.ownerId;
+      if (oId && users[oId]) {
+        if (!users[oId].originalName) users[oId].originalName = users[oId].name;
+        if (alias.ownerNickname) users[oId].name = alias.ownerNickname;
+      }
+    }
+  });
+}
+
 // Storage Management - Clean V6 Defaults (100% Persisted per Google Account)
 function loadData() {
   const savedUsers = localStorage.getItem('sakukita_users_v6');
@@ -460,13 +515,32 @@ function loadData() {
     saveSpaces();
   }
 
+  // Ensure every user has originalName and proper isRemoteOwner flag
+  Object.keys(users).forEach(uid => {
+    if (!users[uid].originalName) {
+      users[uid].originalName = users[uid].name;
+    }
+    if (uid.startsWith('partner_') || (spaces && Object.values(spaces).some(s => s.isRemoteShared && s.ownerId === uid))) {
+      users[uid].isRemoteOwner = true;
+    }
+  });
+
   const savedUserId = localStorage.getItem('sakukita_current_user_id');
-  if (savedUserId && users[savedUserId]) {
+  if (savedUserId && users[savedUserId] && !users[savedUserId].isRemoteOwner) {
     activeUserId = savedUserId;
   } else {
-    const firstUserId = Object.keys(users)[0];
-    if (firstUserId) activeUserId = firstUserId;
+    const localUser = Object.values(users).find(u => !u.isRemoteOwner) || users.user_1;
+    if (localUser) {
+      activeUserId = localUser.id;
+    } else {
+      const firstUserId = Object.keys(users)[0];
+      if (firstUserId) activeUserId = firstUserId;
+    }
+    localStorage.setItem('sakukita_current_user_id', activeUserId);
   }
+
+  // Apply permanent custom aliases across spaces & users
+  applySavedSpaceAliases();
 
   // Guaranteed Permanent Webhook Persistence (Survives any refresh or data switch)
   const globalWebhook = localStorage.getItem('sakukita_global_webhook_url');
@@ -560,7 +634,18 @@ function getActiveUser() {
 
 function switchActiveUser(userId) {
   if (!users[userId]) return;
+  // SECURITY: Never elevate identity to a remote owner!
+  if (users[userId].isRemoteOwner) {
+    const partnerSpace = Object.values(spaces).find(s => s.ownerId === userId);
+    if (partnerSpace) {
+      handleSpaceChange(partnerSpace.id);
+      closeAccountModal();
+      showLiveToast('👁️ Mode Pantau Aktif', `Beralih memantau buku kas ${users[userId].originalName || users[userId].name}. Anda berstatus Pemantau (Read-Only).`);
+    }
+    return;
+  }
   activeUserId = userId;
+  localStorage.setItem('sakukita_current_user_id', userId);
   validateActiveSpace();
   currentFilter = 'all';
 
@@ -584,15 +669,77 @@ function renderUserPills() {
   if (!container) return;
   container.innerHTML = '';
 
-  Object.values(users).forEach(u => {
-    const btn = document.createElement('button');
-    btn.className = `user-pill ${u.id === activeUserId ? 'active' : ''}`;
-    btn.onclick = () => switchActiveUser(u.id);
-    btn.innerHTML = `
-      <span class="pill-avatar">${renderUserAvatarHtml(u, 20)}</span>
-      <span>${escapeHtml(u.name)}</span>
+  // 1. Identify local owner user on this device
+  const localOwner = Object.values(users).find(u => !u.isRemoteOwner) || users.user_1 || users[activeUserId] || { id: 'user_1', name: 'Saya', originalName: 'Saya' };
+  const ownerDisplayName = localOwner.originalName || localOwner.name || 'Saya';
+
+  // 2. Identify all monitored spaces connected in this APK
+  const monitoredSpaces = Object.values(spaces).filter(s => s.isRemoteShared || s.ownerId !== localOwner.id);
+
+  // Pill 1: Local Owner Account: e.g. "riswan(pemilik)"
+  const isOwnerActive = isOwnerOfCurrentSpace();
+  const ownerBtn = document.createElement('button');
+  ownerBtn.type = 'button';
+  ownerBtn.className = `user-pill ${isOwnerActive ? 'active' : ''}`;
+  ownerBtn.title = `Akun HP Ini: ${ownerDisplayName} (Pemilik - Bisa Edit)`;
+  ownerBtn.onclick = () => {
+    // Switch to local owner's primary space
+    const mySpace = Object.values(spaces).find(s => s.ownerId === localOwner.id) || spaces.space_1;
+    activeUserId = localOwner.id;
+    localStorage.setItem('sakukita_current_user_id', localOwner.id);
+    if (mySpace) {
+      activeSpaceId = mySpace.id;
+      localStorage.setItem('sakukita_active_space_id', mySpace.id);
+    }
+    validateActiveSpace();
+    renderUserPills();
+    renderActiveUserProfile();
+    updateSpaceSelectorUI();
+    renderAll();
+    closeAccountModal();
+    showLiveToast('👑 Akun Utama Aktif', `Beralih ke Buku Kas ${escapeHtml(mySpace ? mySpace.name : 'Utama')} (Hak Pemilik).`);
+  };
+  ownerBtn.innerHTML = `
+    <span class="pill-avatar">${renderUserAvatarHtml(localOwner, 20)}</span>
+    <span>${escapeHtml(ownerDisplayName)}(pemilik)</span>
+  `;
+  container.appendChild(ownerBtn);
+
+  // Pills 2..N: Monitored Accounts: e.g. "beti", "nopi"
+  // Keep track of rendered owners to avoid duplicates if a partner has multiple spaces
+  const seenOwners = new Set();
+  monitoredSpaces.forEach(sp => {
+    const partnerUser = users[sp.ownerId] || { name: 'Pasangan', originalName: 'Pasangan' };
+    const originalNameInApk = partnerUser.originalName || partnerUser.name || 'Pengguna';
+    
+    // Distinct check per partner owner
+    if (seenOwners.has(sp.ownerId)) return;
+    seenOwners.add(sp.ownerId);
+
+    const isThisMonitoredActive = (activeSpaceId === sp.id);
+    const partnerBtn = document.createElement('button');
+    partnerBtn.type = 'button';
+    partnerBtn.className = `user-pill user-pill-monitored ${isThisMonitoredActive ? 'active' : ''}`;
+    partnerBtn.title = `Akun Terhubung: ${originalNameInApk} (Hanya Pantau)`;
+    partnerBtn.onclick = () => {
+      // Switch view to this monitored space, but activeUserId REMAINS local owner!
+      activeSpaceId = sp.id;
+      localStorage.setItem('sakukita_active_space_id', sp.id);
+      activeUserId = localOwner.id;
+      localStorage.setItem('sakukita_current_user_id', localOwner.id);
+      validateActiveSpace();
+      renderUserPills();
+      renderActiveUserProfile();
+      updateSpaceSelectorUI();
+      renderAll();
+      closeAccountModal();
+      showLiveToast('👁️ Mode Pantau Aktif', `Beralih memantau Buku Kas "${escapeHtml(sp.name)}" milik ${escapeHtml(originalNameInApk)}. Status: Hanya Pantau.`);
+    };
+    partnerBtn.innerHTML = `
+      <span class="pill-avatar" style="font-size:0.85rem;">👁️</span>
+      <span>${escapeHtml(originalNameInApk)}</span>
     `;
-    container.appendChild(btn);
+    container.appendChild(partnerBtn);
   });
 }
 
@@ -814,6 +961,7 @@ function getAccessibleSpacesForUser(userId) {
 
 function isOwnerOfCurrentSpace() {
   const currentSpace = getActiveSpace();
+  if (!currentSpace) return false;
   return currentSpace.ownerId === activeUserId;
 }
 
@@ -888,6 +1036,9 @@ function renderAll() {
   const addTxBtn = document.getElementById('btn-main-add-tx');
   const addTxBtnText = document.getElementById('btn-add-tx-text');
   const addWalletBtn = document.getElementById('btn-add-wallet-action');
+  const downloadBtn = document.querySelector('.action-btn-download');
+  const syncBtn = document.querySelector('.action-btn-sync');
+  const budgetCard = document.getElementById('budget-card');
 
   if (isOwner) {
     viewerBanner.classList.add('hidden');
@@ -897,15 +1048,39 @@ function renderAll() {
     addTxBtn.className = 'nav-fab-btn';
     addTxBtnText.textContent = 'Catat';
     if (addWalletBtn) addWalletBtn.classList.remove('disabled');
+    if (downloadBtn) {
+      downloadBtn.classList.remove('btn-viewer-locked');
+      downloadBtn.title = 'Pusat Unduh Laporan Keuangan';
+    }
+    if (syncBtn) {
+      syncBtn.classList.remove('btn-viewer-locked');
+      syncBtn.title = 'Koneksi & Sinkronisasi Google Sheets';
+    }
+    if (budgetCard) {
+      budgetCard.classList.remove('budget-card-locked');
+      budgetCard.title = 'Klik untuk atur atau ubah target anggaran bulanan';
+    }
   } else {
     viewerBanner.classList.remove('hidden');
-    viewerDesc.innerHTML = `Buku kas ini milik <strong>${escapeHtml(ownerUser.name)}</strong> (${escapeHtml(ownerUser.email)}). Anda memiliki <strong>Izin Memantau (Read-Only)</strong>.`;
+    viewerDesc.innerHTML = `Buku kas ini milik <strong>${escapeHtml(ownerUser.name)}</strong> (${escapeHtml(ownerUser.email)}). Anda memiliki <strong>Izin Memantau (Read-Only)</strong>. Seluruh fitur unduh, sinkronisasi, dan pencatatan dinonaktifkan.`;
     roleTag.className = 'role-badge role-viewer';
     roleTag.textContent = '👁️ Pantau';
     spaceOwnerLabel.innerHTML = `Memantau: <b>${escapeHtml(currentSpace.name)}</b> <span class="rename-inline-btn" onclick="openRenameMonitoredModal('${currentSpace.id}')" title="Ubah Nama Panggilan Buku Kas Ini" style="cursor:pointer; margin-left:6px; font-size:0.7rem; color:#93c5fd; text-decoration:underline;">✏️ Ubah Panggilan</span>`;
     addTxBtn.className = 'nav-fab-btn btn-viewer-locked';
     addTxBtnText.textContent = '🔒 Pantau';
     if (addWalletBtn) addWalletBtn.classList.add('disabled');
+    if (downloadBtn) {
+      downloadBtn.classList.add('btn-viewer-locked');
+      downloadBtn.title = '🔒 Unduh Dinonaktifkan (Mode Hanya Pantau)';
+    }
+    if (syncBtn) {
+      syncBtn.classList.add('btn-viewer-locked');
+      syncBtn.title = '🔒 Sinkron Dinonaktifkan (Mode Hanya Pantau)';
+    }
+    if (budgetCard) {
+      budgetCard.classList.add('budget-card-locked');
+      budgetCard.title = '🔒 Target Anggaran hanya dapat diatur oleh pemilik buku kas';
+    }
   }
 
   renderOverview(currentSpace);
@@ -989,7 +1164,7 @@ function renderOverview(currentSpace) {
 function openBudgetModal() {
   const currentSpace = getActiveSpace();
   if (!isOwnerOfCurrentSpace()) {
-    alert('Akses Ditolak: Hanya pemilik buku kas yang dapat mengatur target anggaran bulanan.');
+    showLiveToast('🔒 Mode Hanya Pantau', 'Pengaturan target anggaran bulanan dinonaktifkan. Anda hanya memiliki izin memantau.');
     return;
   }
   
@@ -1333,7 +1508,7 @@ function handleSaveTransaction(e) {
 
 function deleteTransaction(txId) {
   if (!isOwnerOfCurrentSpace()) {
-    alert('Akses Ditolak: Hanya pemilik buku kas yang dapat menghapus transaksi.');
+    showLiveToast('🔒 Mode Hanya Pantau', 'Hanya pemilik buku kas yang dapat menghapus transaksi.');
     return;
   }
 
@@ -1490,7 +1665,7 @@ function handleSaveWallet(e) {
 
 function openAddWalletModal() {
   if (!isOwnerOfCurrentSpace()) {
-    alert('Akses Ditolak: Hanya pemilik buku kas yang dapat menambah dompet.');
+    showLiveToast('🔒 Mode Hanya Pantau', 'Penambahan dompet dinonaktifkan saat memantau buku kas orang lain.');
     return;
   }
   const form = document.getElementById('form-wallet');
@@ -1514,7 +1689,10 @@ function openAddWalletModal() {
 }
 
 function openEditWalletModal(walletId) {
-  if (!isOwnerOfCurrentSpace()) return;
+  if (!isOwnerOfCurrentSpace()) {
+    showLiveToast('🔒 Mode Hanya Pantau', 'Dompet ini milik pemilik buku kas dan tidak dapat diubah.');
+    return;
+  }
   const currentSpace = getActiveSpace();
   const wallet = currentSpace.wallets.find(w => w.id === walletId);
   if (!wallet) return;
@@ -1843,11 +2021,19 @@ function triggerGoogleSheetsAutoSync(tx, actionType, space) {
 }
 
 function openDownloadModal() {
+  if (!isOwnerOfCurrentSpace()) {
+    showLiveToast('🔒 Mode Hanya Pantau', 'Fitur unduh laporan keuangan dinonaktifkan. Anda hanya memiliki izin memantau pada buku kas ini.');
+    return;
+  }
   const modal = document.getElementById('modal-download');
   if (modal) modal.classList.remove('hidden');
 }
 
 function openGoogleSheetsModal() {
+  if (!isOwnerOfCurrentSpace()) {
+    showLiveToast('🔒 Mode Hanya Pantau', 'Pengaturan Google Sheets & data dinonaktifkan saat memantau buku kas orang lain.');
+    return;
+  }
   const activeUser = getActiveUser();
   renderActiveUserProfile();
 
@@ -1875,6 +2061,10 @@ function openGoogleSheetsModal() {
 }
 
 function openSyncOnlyModal() {
+  if (!isOwnerOfCurrentSpace()) {
+    showLiveToast('🔒 Mode Hanya Pantau', 'Fitur sinkronisasi Google Sheets dinonaktifkan. Anda hanya memiliki izin memantau pada buku kas ini.');
+    return;
+  }
   const activeUser = getActiveUser();
   renderActiveUserProfile();
 
@@ -2165,6 +2355,10 @@ function openInstallGuideModal() {
 
 // STRICT PERSONAL CSV EXPORT: Authentic Bank Statement (Rekening Koran) Format
 function exportPersonalCsv() {
+  if (!isOwnerOfCurrentSpace()) {
+    showLiveToast('🔒 Mode Hanya Pantau', 'Unduh laporan CSV dinonaktifkan saat memantau buku kas orang lain.');
+    return;
+  }
   const activeUser = getActiveUser();
 
   // STRICT GUARANTEE: Filter ONLY transactions belonging to activeUser!
@@ -2307,6 +2501,10 @@ function exportPersonalCsv() {
 
 // STRICT PERSONAL PDF EXPORT: Authentic Bank Statement (Rekening Koran) PDF
 function exportPersonalPdf() {
+  if (!isOwnerOfCurrentSpace()) {
+    showLiveToast('🔒 Mode Hanya Pantau', 'Cetak rekening koran PDF dinonaktifkan saat memantau buku kas orang lain.');
+    return;
+  }
   if (!window.jspdf || !window.jspdf.jsPDF) {
     alert('Modul PDF sedang dimuat. Silakan tunggu beberapa detik dan coba lagi.');
     return;
@@ -2994,6 +3192,7 @@ function handleSaveProfile(e) {
   const selectedAvatar = document.querySelector('input[name="profile_avatar"]:checked')?.value || '👤';
 
   user.name = newName;
+  user.originalName = newName;
   user.email = newEmail;
   user.avatar = selectedAvatar;
 
@@ -3052,10 +3251,11 @@ function getDeviceGoogleAccounts() {
     }
   }
 
-  // Include any verified user from `users` that has a valid email and not already in list
+  // Include any verified local user from `users` that has a valid email and not already in list
   if (typeof users === 'object' && users !== null) {
     Object.values(users).forEach(u => {
-      if (u && u.email && typeof u.email === 'string' && u.email.includes('@')) {
+      // SECURITY: Exclude remote owners so monitored partner accounts NEVER appear as local Google login accounts
+      if (u && !u.isRemoteOwner && u.email && typeof u.email === 'string' && u.email.includes('@')) {
         const uEmail = u.email.trim().toLowerCase();
         const alreadyExists = list.some(a => a && a.email && typeof a.email === 'string' && a.email.trim().toLowerCase() === uEmail);
         if (!alreadyExists) {
@@ -3514,9 +3714,12 @@ function formatTimeAgo(date) {
 
 function escapeHtml(str) {
   if (!str) return '';
-  const div = document.createElement('div');
-  div.textContent = str;
-  return div.innerHTML;
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
 }
 
 function copySqlCode() {
@@ -3755,9 +3958,16 @@ function applyRemoteSpaceJoin(data, sourceLabel) {
 
   // 1. Generate unique partner owner ID in local users (distinct from local activeUserId!)
   const partnerOwnerId = 'partner_' + getSyncHash(ownerEmail || incomingOwnerId || ownerName);
+  const remoteSpaceId = 'shared_' + getSyncHash(ownerEmail || incomingOwnerId || rawSpaceId) + '_' + rawSpaceId;
+
+  // Check if viewer previously saved a custom rename/alias for this space
+  const savedAliases = getSpaceAliases();
+  const existingAlias = savedAliases[remoteSpaceId] || savedAliases[rawSpaceId];
+
   users[partnerOwnerId] = {
     id: partnerOwnerId,
-    name: ownerName,
+    originalName: ownerName, // Real name given in their APK
+    name: (existingAlias && existingAlias.ownerNickname) ? existingAlias.ownerNickname : (users[partnerOwnerId]?.name || ownerName),
     email: ownerEmail,
     avatar: '👤',
     photo: '',
@@ -3768,8 +3978,6 @@ function applyRemoteSpaceJoin(data, sourceLabel) {
     isRemoteOwner: true
   };
 
-  // 2. Generate unique remote space ID (never overwrite User B's own primary space!)
-  const remoteSpaceId = 'shared_' + getSyncHash(ownerEmail || incomingOwnerId || rawSpaceId) + '_' + rawSpaceId;
   const cloudTopic = spaceObj.cloudTopic || getSyncTopicForSpace(rawSpaceId, ownerEmail);
 
   // 3. Make sure current active user is registered as allowed viewer
@@ -3778,12 +3986,15 @@ function applyRemoteSpaceJoin(data, sourceLabel) {
     viewers.push(activeUserId);
   }
 
+  const defaultSpaceName = spaceObj.spaceName || spaceObj.name || `Buku Kas (${ownerName})`;
+  const resolvedSpaceName = (existingAlias && existingAlias.spaceName) ? existingAlias.spaceName : defaultSpaceName;
+
   // 4. Update or insert into spaces
   spaces[remoteSpaceId] = {
     id: remoteSpaceId,
     originalSpaceId: rawSpaceId,
     cloudTopic: cloudTopic,
-    name: spaceObj.spaceName || spaceObj.name || `Buku Kas (${ownerName})`,
+    name: resolvedSpaceName,
     icon: spaceObj.spaceIcon || spaceObj.icon || '📘',
     ownerId: partnerOwnerId, // IMPORTANT: partner is owner, so activeUserId is VIEWER!
     allowedViewers: viewers,
@@ -3895,7 +4106,10 @@ async function pollSpaceFromCloud(spaceId, force = false) {
         currentSpace.wallets = sp.wallets;
         changed = true;
       }
-      if (sp.name && sp.name !== currentSpace.name) {
+      // Check if user has a custom alias saved for this space
+      const savedAliases = getSpaceAliases();
+      const hasAlias = Boolean(savedAliases[spaceId] || (currentSpace.originalSpaceId && savedAliases[currentSpace.originalSpaceId]));
+      if (!hasAlias && sp.name && sp.name !== currentSpace.name) {
         currentSpace.name = sp.name;
         changed = true;
       }
@@ -3903,8 +4117,17 @@ async function pollSpaceFromCloud(spaceId, force = false) {
         currentSpace.budget = sp.budget;
         changed = true;
       }
+      // Keep partner owner originalName updated, but do not overwrite local nickname if hasAlias
+      if (sp.ownerName && users[currentSpace.ownerId]) {
+        users[currentSpace.ownerId].originalName = sp.ownerName;
+        if (!hasAlias && users[currentSpace.ownerId].name !== sp.ownerName) {
+          users[currentSpace.ownerId].name = sp.ownerName;
+          changed = true;
+        }
+      }
       if (changed) {
         saveSpaces();
+        saveUsers();
         renderAll();
         if (force) {
           showLiveToast('🔄 Data Tersinkron', 'Data buku kas pasangan berhasil diperbarui ke kondisi terkini.');
@@ -4127,7 +4350,7 @@ function openRenameMonitoredModal(spaceId) {
   const spaceInput = document.getElementById('rename-space-name');
 
   if (idInput) idInput.value = targetSpaceId;
-  if (ownerInput) ownerInput.value = ownerUser.name || '';
+  if (ownerInput) ownerInput.value = ownerUser.name || ownerUser.originalName || '';
   if (spaceInput) spaceInput.value = currentSpace.name || '';
 
   openModal('modal-rename-monitored');
@@ -4154,13 +4377,20 @@ function handleSaveRenameMonitored(e) {
     users[currentSpace.ownerId].name = newOwnerName;
   }
 
+  // Save alias permanently in localStorage
+  saveSpaceAlias(targetSpaceId, newSpaceName, newOwnerName, currentSpace.ownerId);
+  if (currentSpace.originalSpaceId) {
+    saveSpaceAlias(currentSpace.originalSpaceId, newSpaceName, newOwnerName, currentSpace.ownerId);
+  }
+
   saveSpaces();
   saveUsers();
   renderAll();
   updateSpaceSelectorUI();
+  renderUserPills();
   closeModal('modal-rename-monitored');
 
-  showLiveToast('✏️ Nama Panggilan Disimpan', `Buku kas kini dinamai "${newSpaceName}" (${newOwnerName}).`);
+  showLiveToast('✏️ Nama Panggilan Disimpan', `Buku kas kini dinamai "${newSpaceName}" (${newOwnerName}). Nama tersimpan permanen di HP Anda.`);
 }
 
 function handleLeaveMonitoredSpace() {
@@ -4169,6 +4399,8 @@ function handleLeaveMonitoredSpace() {
   if (!currentSpace) return;
 
   if (confirm(`Apakah Anda yakin ingin berhenti memantau "${currentSpace.name}"?\nBuku kas ini akan dihapus dari daftar buku kas di HP Anda.`)) {
+    removeSpaceAlias(targetSpaceId);
+    if (currentSpace.originalSpaceId) removeSpaceAlias(currentSpace.originalSpaceId);
     delete spaces[targetSpaceId];
     saveSpaces();
     activeSpaceId = 'space_1';
@@ -4176,6 +4408,7 @@ function handleLeaveMonitoredSpace() {
     validateActiveSpace();
     renderAll();
     updateSpaceSelectorUI();
+    renderUserPills();
     closeModal('modal-rename-monitored');
     closeModal('modal-collaboration');
     showLiveToast('🚪 Berhenti Memantau', `Buku kas "${currentSpace.name}" telah dihapus dari HP Anda.`);
