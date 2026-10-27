@@ -278,6 +278,25 @@ function closeAccountModal() {
   if (modal) modal.classList.add('hidden');
 }
 
+// Floating Google Login Bar Controller (Guest / Not Logged In)
+function updateFloatingLoginBar(isLoggedIn) {
+  const bar = document.getElementById('floating-guest-login-bar');
+  if (!bar) return;
+
+  if (isLoggedIn === undefined) {
+    const user = getActiveUser();
+    const hasEmail = Boolean(user && user.email && user.email.includes('@'));
+    const isStored = localStorage.getItem('sakukita_logged_in') === 'true';
+    isLoggedIn = hasEmail && isStored;
+  }
+
+  if (isLoggedIn) {
+    bar.classList.add('hidden');
+  } else {
+    bar.classList.remove('hidden');
+  }
+}
+
 // Real-time synchronization channel
 const syncChannel = ('BroadcastChannel' in window) 
   ? new BroadcastChannel('sakukita_v3_sync') 
@@ -401,13 +420,17 @@ document.addEventListener('DOMContentLoaded', () => {
   processUrlJoinSpaceParam();
   setupCloudSyncLoop();
 
-  // If not logged in or active user email is empty: Show Google Login (kecuali jika membuka tautan join_space)
+  // On first install / fresh launch: Show Floating bar & Auto-open Google Login if not logged in
   const currentUser = getActiveUser();
   const hasJoinParam = new URLSearchParams(window.location.search).has('join_space');
-  if (!hasJoinParam && (!localStorage.getItem('sakukita_logged_in') || !currentUser.email)) {
+  const isLoggedIn = (localStorage.getItem('sakukita_logged_in') === 'true') && Boolean(currentUser && currentUser.email && currentUser.email.includes('@'));
+
+  updateFloatingLoginBar(isLoggedIn);
+
+  if (!hasJoinParam && !isLoggedIn) {
     setTimeout(() => {
       openGoogleLoginModal();
-    }, 400);
+    }, 450);
   }
 });
 
@@ -641,6 +664,7 @@ function renderActiveUserProfile() {
 
   // Update dynamic indicators across APK UI
   updateGoogleSheetsSyncIndicators();
+  updateFloatingLoginBar();
 }
 
 function updateGoogleSheetsSyncIndicators() {
@@ -2939,8 +2963,11 @@ function openEditProfileModal() {
   const user = getActiveUser();
   pendingProfilePhoto = undefined;
 
-  document.getElementById('edit-profile-name').value = user.name;
-  document.getElementById('edit-profile-email').value = user.email;
+  const nameInput = document.getElementById('edit-profile-name');
+  if (nameInput) nameInput.value = user.name || '';
+
+  const emailInput = document.getElementById('edit-profile-email');
+  if (emailInput) emailInput.value = user.email || '';
 
   const removeBtn = document.getElementById('btn-remove-photo');
   if (user.photo) {
@@ -2956,7 +2983,7 @@ function openEditProfileModal() {
     if (r.value === user.avatar) r.checked = true;
   });
 
-  document.getElementById('modal-profile').classList.remove('hidden');
+  openModal('modal-profile');
 }
 
 function handleSaveProfile(e) {
@@ -3000,45 +3027,86 @@ function getDeviceGoogleAccounts() {
   const raw = localStorage.getItem('sakukita_device_google_accounts');
   if (raw) {
     try {
-      list = JSON.parse(raw);
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        parsed.forEach(item => {
+          if (item && typeof item === 'object' && item.email && typeof item.email === 'string' && item.email.includes('@')) {
+            list.push({
+              email: item.email.trim(),
+              name: item.name || item.email.split('@')[0],
+              avatar: item.avatar || '👤',
+              photo: item.photo || ''
+            });
+          } else if (typeof item === 'string' && item.includes('@')) {
+            list.push({
+              email: item.trim(),
+              name: item.split('@')[0],
+              avatar: '👤',
+              photo: ''
+            });
+          }
+        });
+      }
     } catch (e) {
       list = [];
     }
   }
 
   // Include any verified user from `users` that has a valid email and not already in list
-  Object.values(users).forEach(u => {
-    if (u.email && u.email.includes('@')) {
-      if (!list.some(a => a.email.toLowerCase() === u.email.toLowerCase())) {
-        list.push({ email: u.email, name: u.name, avatar: u.avatar || '👤', photo: u.photo || '' });
+  if (typeof users === 'object' && users !== null) {
+    Object.values(users).forEach(u => {
+      if (u && u.email && typeof u.email === 'string' && u.email.includes('@')) {
+        const uEmail = u.email.trim().toLowerCase();
+        const alreadyExists = list.some(a => a && a.email && typeof a.email === 'string' && a.email.trim().toLowerCase() === uEmail);
+        if (!alreadyExists) {
+          list.push({
+            email: u.email.trim(),
+            name: u.name || u.email.split('@')[0],
+            avatar: u.avatar || '👤',
+            photo: u.photo || ''
+          });
+        }
       }
-    }
-  });
+    });
+  }
 
   return list;
 }
 
 function saveDeviceGoogleAccount(email, name, avatar = '👤', photo = '') {
+  if (!email || typeof email !== 'string') return;
+  const cleanEmail = email.trim().toLowerCase();
   let list = getDeviceGoogleAccounts();
-  const existingIdx = list.findIndex(a => a.email.toLowerCase() === email.toLowerCase());
+  const existingIdx = list.findIndex(a => a && a.email && typeof a.email === 'string' && a.email.trim().toLowerCase() === cleanEmail);
   if (existingIdx >= 0) {
     if (name) list[existingIdx].name = name;
     if (photo) list[existingIdx].photo = photo;
   } else {
-    list.push({ email, name, avatar, photo });
+    list.push({ email: cleanEmail, name: name || cleanEmail.split('@')[0], avatar, photo });
   }
-  localStorage.setItem('sakukita_device_google_accounts', JSON.stringify(list));
+  try {
+    localStorage.setItem('sakukita_device_google_accounts', JSON.stringify(list));
+  } catch (e) {
+    console.warn('Failed to save device accounts', e);
+  }
 }
 
 function renderDeviceAccountsList() {
   const container = document.getElementById('device-accounts-container');
   if (!container) return;
 
-  const accounts = getDeviceGoogleAccounts();
+  let accounts = [];
+  try {
+    accounts = getDeviceGoogleAccounts();
+  } catch (err) {
+    console.error('Error getting device accounts:', err);
+    accounts = [];
+  }
+
   if (accounts.length === 0) {
     container.innerHTML = `
       <div style="font-size:0.75rem; color:#94a3b8; background:rgba(255,255,255,0.02); border:1px dashed rgba(255,255,255,0.08); border-radius:8px; padding:10px 12px; text-align:center;">
-        Belum ada akun tersimpan di HP ini. Tekan tombol di bawah atau masukkan email manual di Opsi 2.
+        Belum ada akun tersimpan di HP ini. Masukkan email di Opsi 2 di bawah.
       </div>
     `;
     const titleEl = document.getElementById('btn-onetap-title');
@@ -3046,13 +3114,15 @@ function renderDeviceAccountsList() {
   } else {
     let html = '';
     accounts.forEach(acc => {
+      const emailStr = (acc.email || '').replace(/'/g, "\\'");
+      const nameStr = (acc.name || '').replace(/'/g, "\\'");
       html += `
-        <div class="device-acc-card" onclick="loginWithSavedGoogleAccount('${escapeHtml(acc.email)}', '${escapeHtml(acc.name)}')">
+        <div class="device-acc-card" onclick="loginWithSavedGoogleAccount('${emailStr}', '${nameStr}')">
           <div class="device-acc-avatar-wrap">
             <svg width="20" height="20" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/></svg>
           </div>
           <div class="device-acc-info">
-            <strong class="device-acc-name">${escapeHtml(acc.name)}</strong>
+            <strong class="device-acc-name">${escapeHtml(acc.name || acc.email)}</strong>
             <span class="device-acc-email">${escapeHtml(acc.email)}</span>
           </div>
           <button type="button" class="btn-choose-device-acc">Pilih Akun</button>
@@ -3061,15 +3131,19 @@ function renderDeviceAccountsList() {
     });
     container.innerHTML = html;
     const titleEl = document.getElementById('btn-onetap-title');
-    if (titleEl) titleEl.textContent = `Masuk sebagai ${accounts[0].name}`;
+    if (titleEl && accounts[0]) {
+      titleEl.textContent = `Masuk sebagai ${accounts[0].name || accounts[0].email}`;
+    }
   }
 }
 
 function loginWithSavedGoogleAccount(email, name) {
-  let existingUser = Object.values(users).find(u => u.email && u.email.toLowerCase() === email.toLowerCase());
+  if (!email || typeof email !== 'string') return;
+  const cleanEmail = email.trim().toLowerCase();
+  let existingUser = Object.values(users).find(u => u && u.email && u.email.toLowerCase() === cleanEmail);
   if (existingUser) {
     activeUserId = existingUser.id;
-    if (name) existingUser.name = name;
+    if (name && name.trim()) existingUser.name = name.trim();
   } else {
     if (users.user_1 && (!users.user_1.email || users.user_1.email === '')) {
       users.user_1.email = email;
@@ -3158,19 +3232,27 @@ function triggerGoogleOneTapLogin() {
 }
 
 function openGoogleLoginModal() {
-  const emailInput = document.getElementById('login-google-email');
-  const nameInput = document.getElementById('login-google-name');
-  const currentUser = getActiveUser();
+  closeModal('modal-account');
+  closeModal('modal-profile');
 
-  if (emailInput && currentUser && currentUser.email) {
-    emailInput.value = currentUser.email;
-  }
-  if (nameInput && currentUser && currentUser.name && currentUser.name !== 'Pengguna SakuKita') {
-    nameInput.value = currentUser.name;
+  try {
+    const emailInput = document.getElementById('login-google-email');
+    const nameInput = document.getElementById('login-google-name');
+    const currentUser = getActiveUser();
+
+    if (emailInput) {
+      emailInput.value = (currentUser && currentUser.email) ? currentUser.email : '';
+    }
+    if (nameInput) {
+      nameInput.value = (currentUser && currentUser.name && currentUser.name !== 'Pengguna SakuKita') ? currentUser.name : '';
+    }
+
+    renderDeviceAccountsList();
+  } catch (err) {
+    console.error('Error preparing Google login modal:', err);
   }
 
-  renderDeviceAccountsList();
-  document.getElementById('modal-google-login').classList.remove('hidden');
+  openModal('modal-google-login');
 }
 
 function handleAddNewGoogleAccount(e) {
@@ -3257,6 +3339,7 @@ function handleAddNewGoogleAccount(e) {
 function handleGoogleLogout() {
   if (confirm('Keluar dari sesi akun Google saat ini?\nCatatan keuangan Anda akan tetap tersimpan aman di aplikasi ini.')) {
     localStorage.removeItem('sakukita_logged_in');
+    updateFloatingLoginBar(false);
     closeModal('modal-profile');
     closeModal('modal-account');
 

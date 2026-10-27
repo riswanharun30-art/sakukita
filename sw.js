@@ -1,5 +1,5 @@
 // SakuKita Service Worker - Offline Caching & PWA Ready
-const CACHE_NAME = 'sakukita-cache-v23-multispace-rename-landing';
+const CACHE_NAME = 'sakukita-cache-v26-floating-login-restore';
 const ASSETS = [
   './',
   './index.html',
