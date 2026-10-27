@@ -684,6 +684,298 @@
       pointer-events: auto;
     }
 
+    /* Modal Pasang APK / PWA */
+    .modal-backdrop-landing {
+      position: fixed;
+      inset: 0;
+      background: rgba(9, 13, 22, 0.85);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      opacity: 1;
+      visibility: visible;
+      transition: all 0.25s ease;
+    }
+
+    .modal-backdrop-landing.hidden {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    .modal-card-landing {
+      background: #0f172a;
+      border: 1px solid rgba(59, 130, 246, 0.35);
+      border-radius: 24px;
+      width: 100%;
+      max-width: 580px;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.8), 0 0 40px rgba(59, 130, 246, 0.2);
+      transform: scale(1);
+      transition: transform 0.25s ease;
+    }
+
+    .modal-backdrop-landing.hidden .modal-card-landing {
+      transform: scale(0.95);
+    }
+
+    .modal-header-landing {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px 24px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .modal-header-brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .modal-brand-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      box-shadow: 0 0 16px rgba(59, 130, 246, 0.4);
+    }
+
+    .modal-header-brand h3 {
+      font-size: 1.15rem;
+      font-weight: 800;
+      color: #fff;
+      line-height: 1.2;
+    }
+
+    .modal-sub {
+      font-size: 0.75rem;
+      color: #94a3b8;
+      display: block;
+      margin-top: 2px;
+    }
+
+    .modal-close-landing {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      color: #94a3b8;
+      width: 34px;
+      height: 34px;
+      border-radius: 10px;
+      font-size: 1.25rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+    }
+
+    .modal-close-landing:hover {
+      background: rgba(239, 68, 68, 0.2);
+      color: #ef4444;
+      border-color: rgba(239, 68, 68, 0.4);
+    }
+
+    .modal-body-landing {
+      padding: 22px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    .apk-notice-box {
+      background: rgba(16, 185, 129, 0.08);
+      border: 1px solid rgba(16, 185, 129, 0.25);
+      border-radius: 14px;
+      padding: 14px 16px;
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+    }
+
+    .apk-notice-box .notice-icon {
+      font-size: 1.4rem;
+      line-height: 1;
+    }
+
+    .apk-notice-box strong {
+      font-size: 0.88rem;
+      color: #34d399;
+      display: block;
+      margin-bottom: 3px;
+    }
+
+    .apk-notice-box p {
+      font-size: 0.78rem;
+      color: #cbd5e1;
+      line-height: 1.5;
+      margin: 0;
+    }
+
+    .modal-action-buttons {
+      display: flex;
+      gap: 10px;
+    }
+
+    .btn-primary-action {
+      flex: 1.3;
+      padding: 13px 18px;
+      background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+      color: #fff;
+      border: none;
+      border-radius: 12px;
+      font-size: 0.92rem;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 4px 16px rgba(37, 99, 235, 0.4);
+      transition: all 0.2s ease;
+      text-align: center;
+    }
+
+    .btn-primary-action:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 22px rgba(37, 99, 235, 0.6);
+    }
+
+    .btn-secondary-action {
+      flex: 1;
+      padding: 13px 18px;
+      background: rgba(255, 255, 255, 0.07);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: #fff;
+      text-decoration: none;
+      border-radius: 12px;
+      font-size: 0.92rem;
+      font-weight: 600;
+      transition: all 0.2s ease;
+      text-align: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .btn-secondary-action:hover {
+      background: rgba(255, 255, 255, 0.12);
+      border-color: rgba(255, 255, 255, 0.25);
+    }
+
+    .device-guides-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .device-guide-card {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 14px;
+      padding: 14px;
+    }
+
+    .device-guide-badge {
+      display: inline-block;
+      font-size: 0.72rem;
+      font-weight: 800;
+      padding: 3px 8px;
+      border-radius: 6px;
+      margin-bottom: 10px;
+    }
+
+    .device-guide-badge.android {
+      background: rgba(16, 185, 129, 0.15);
+      color: #34d399;
+    }
+
+    .device-guide-badge.ios {
+      background: rgba(59, 130, 246, 0.15);
+      color: #60a5fa;
+    }
+
+    .device-steps-list {
+      padding-left: 18px;
+      font-size: 0.78rem;
+      color: #94a3b8;
+      line-height: 1.5;
+    }
+
+    .device-steps-list li {
+      margin-bottom: 6px;
+    }
+
+    .device-steps-list li b {
+      color: #f1f5f9;
+    }
+
+    .partner-share-box {
+      background: rgba(15, 23, 42, 0.7);
+      border: 1px solid rgba(59, 130, 246, 0.25);
+      border-radius: 12px;
+      padding: 12px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .share-box-label {
+      font-size: 0.72rem;
+      color: #60a5fa;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .share-box-row {
+      display: flex;
+      gap: 8px;
+    }
+
+    .share-box-input {
+      flex: 1;
+      background: rgba(0, 0, 0, 0.35);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      padding: 8px 12px;
+      color: #f8fafc;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+      outline: none;
+    }
+
+    .btn-copy-share {
+      padding: 8px 14px;
+      background: #3b82f6;
+      border: none;
+      border-radius: 8px;
+      color: #fff;
+      font-size: 0.8rem;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.2s ease;
+    }
+
+    .btn-copy-share:hover {
+      background: #2563eb;
+    }
+
+    .share-box-hint {
+      font-size: 0.7rem;
+      color: #64748b;
+    }
+
+    @media (max-width: 600px) {
+      .device-guides-grid {
+        grid-template-columns: 1fr;
+      }
+      .modal-action-buttons {
+        flex-direction: column;
+      }
+    }
+
     /* Responsive */
     @media (max-width: 900px) {
       .hero-grid { grid-template-columns: 1fr; text-align: center; }
@@ -717,9 +1009,9 @@
       </nav>
 
       <div class="nav-actions">
-        <a href="index.html" class="btn-nav-app">
-          <span>🚀 Buka Aplikasi</span>
-        </a>
+        <button type="button" class="btn-nav-app" onclick="openInstallApkModal()" style="border:none; cursor:pointer;">
+          <span>📲 Download / Pasang APK</span>
+        </button>
       </div>
     </div>
   </header>
@@ -739,21 +1031,21 @@
         </p>
 
         <div class="hero-actions">
-          <a href="index.html" class="btn-hero-primary">
-            <span>⚡ Buka & Pasang Aplikasi Sekarang</span>
-          </a>
-          <a href="#pasang-hp" class="btn-hero-secondary">
-            <span>📲 Panduan Pasang di HP</span>
+          <button type="button" class="btn-hero-primary" onclick="openInstallApkModal()">
+            <span>📲 Download &amp; Pasang APK di HP</span>
+          </button>
+          <a href="index.html" class="btn-hero-secondary">
+            <span>🚀 Buka Aplikasi Sekarang</span>
           </a>
         </div>
 
-        <!-- Localhost Wi-Fi Link Box -->
+        <!-- Public Online & Share Link Box -->
         <div class="hero-ip-card">
           <div class="ip-details">
-            <span class="ip-title-label">📶 Tautan Buka di Browser HP (Wi-Fi / Hotspot):</span>
-            <span class="ip-url-text" id="landing-phone-url">http://192.168.101.71:8080</span>
+            <span class="ip-title-label">🌐 Link Resmi Online (Bisa Dibuka di Mana Saja / Kuota HP):</span>
+            <span class="ip-url-text" id="landing-phone-url">https://riswanharun30-art.github.io/sakukita/index.html</span>
           </div>
-          <button class="btn-copy-link" onclick="copyLandingUrl()">Salin Link HP</button>
+          <button class="btn-copy-link" onclick="copyLandingUrl()">Salin Link Pasangan</button>
         </div>
       </div>
 
@@ -867,7 +1159,7 @@
           <span class="install-badge badge-android">Android (Chrome)</span>
           <h4>HP Android (Google Chrome)</h4>
           <ol>
-            <li>Buka link <b>http://192.168.101.71:8080</b> di Chrome HP Anda.</li>
+            <li>Buka link <b>https://riswanharun30-art.github.io/sakukita/</b> di Chrome HP Anda (Bisa dibuka di mana saja & pakai kuota internet apa pun).</li>
             <li>Tap banner <b>"Pasang Sekarang"</b> di atas layar.</li>
             <li>Atau tap menu titik tiga (<b>⋮</b>) lalu pilih <b>"Instal Aplikasi"</b> / <b>"Tambahkan ke Layar Utama"</b>.</li>
             <li>Selesai! Ikon SakuKita siap dibuka dari menu HP.</li>
@@ -920,29 +1212,168 @@
     </div>
   </footer>
 
+  <!-- Modal: Download & Pasang APK / PWA ke HP -->
+  <div id="modal-install-apk-guide" class="modal-backdrop-landing hidden" onclick="handleLandingBackdrop(event)">
+    <div class="modal-card-landing">
+      <div class="modal-header-landing">
+        <div class="modal-header-brand">
+          <img src="icon-192.png" alt="SakuKita Icon" class="modal-brand-icon">
+          <div>
+            <h3>Pasang &amp; Download APK SakuKita</h3>
+            <span class="modal-sub">Standar PWA Resmi (Google Android &amp; Apple iOS)</span>
+          </div>
+        </div>
+        <button type="button" class="modal-close-landing" onclick="closeInstallApkModal()">&times;</button>
+      </div>
+
+      <div class="modal-body-landing">
+        <!-- Reassuring Explanation Banner -->
+        <div class="apk-notice-box">
+          <span class="notice-icon">🛡️</span>
+          <div>
+            <strong>Kenapa Tanpa File .APK Mentah?</strong>
+            <p>File .apk mentah dari internet sering memicu peringatan merah <i>"File ini berisiko/membahayakan"</i> dari Google Play Protect. SakuKita menggunakan <b>PWA Resmi Google &amp; Apple</b> yang <b>100% Aman</b>, sangat ringan (&lt; 2 MB), dan terpasang langsung ke menu HP Anda dengan 1 klik tanpa was-was!</p>
+          </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="modal-action-buttons">
+          <button type="button" class="btn-primary-action" onclick="triggerLandingInstall()">
+            <span>📲 Pasang Aplikasi Sekarang ke HP</span>
+          </button>
+          <a href="index.html" class="btn-secondary-action">
+            <span>🚀 Buka Aplikasi Langsung</span>
+          </a>
+        </div>
+
+        <!-- 2 Column Guides for Android and iPhone -->
+        <div class="device-guides-grid">
+          <!-- Android Card -->
+          <div class="device-guide-card">
+            <div class="device-guide-badge android">📱 HP Android (Chrome)</div>
+            <ol class="device-steps-list">
+              <li>Buka tautan ini di browser <b>Google Chrome</b>.</li>
+              <li>Ketuk tombol titik tiga (<b>⋮</b>) di pojok kanan atas layar.</li>
+              <li>Pilih menu <b>"Instal Aplikasi"</b> atau <b>"Tambahkan ke Layar Utama"</b>.</li>
+              <li>Ketuk <b>Instal</b>. Ikon SakuKita langsung muncul di beranda HP Anda!</li>
+            </ol>
+          </div>
+
+          <!-- iOS Card -->
+          <div class="device-guide-card">
+            <div class="device-guide-badge ios">🍏 iPhone &amp; iPad (Safari)</div>
+            <ol class="device-steps-list">
+              <li>Buka tautan ini di browser <b>Safari</b>.</li>
+              <li>Ketuk ikon <b>Bagikan (Share ⎋)</b> di bar navigasi bawah.</li>
+              <li>Gulir ke bawah dan ketuk <b>"Tambah ke Layar Utama"</b>.</li>
+              <li>Ketuk <b>"Tambah"</b> di sudut kanan atas. Selesai!</li>
+            </ol>
+          </div>
+        </div>
+
+        <!-- Quick Share Box for Partner -->
+        <div class="partner-share-box">
+          <span class="share-box-label">🌐 Bagikan Tautan ini ke Pasangan / Keluarga:</span>
+          <div class="share-box-row">
+            <input type="text" id="landing-modal-url" class="share-box-input" value="https://riswanharun30-art.github.io/sakukita/index.html" readonly>
+            <button type="button" class="btn-copy-share" onclick="copyLandingModalUrl()">Salin Link</button>
+          </div>
+          <span class="share-box-hint">💡 Kirim link ini via WhatsApp ke pasangan. Bisa langsung dibuka di HP dari mana saja tanpa perlu satu Wi-Fi!</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Toast Notification -->
   <div id="toast" class="toast-box">Tautan berhasil disalin ke clipboard!</div>
 
   <script>
+    let landingDeferredPrompt = null;
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      landingDeferredPrompt = e;
+    });
+
+    document.addEventListener('DOMContentLoaded', () => {
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('./sw.js').catch(err => console.log('SW registration error', err));
+      }
+
+      const urlEl = document.getElementById('landing-phone-url');
+      const modalUrlEl = document.getElementById('landing-modal-url');
+      const defaultOnlineUrl = 'https://riswanharun30-art.github.io/sakukita/index.html';
+      let fullAppUrl = defaultOnlineUrl;
+
+      if (window.location.protocol.startsWith('http')) {
+        const basePath = window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/') + 1);
+        fullAppUrl = window.location.origin + basePath + 'index.html';
+      }
+
+      if (urlEl) urlEl.innerText = fullAppUrl;
+      if (modalUrlEl) modalUrlEl.value = fullAppUrl;
+    });
+
+    function openInstallApkModal() {
+      const modal = document.getElementById('modal-install-apk-guide');
+      if (modal) modal.classList.remove('hidden');
+    }
+
+    function closeInstallApkModal() {
+      const modal = document.getElementById('modal-install-apk-guide');
+      if (modal) modal.classList.add('hidden');
+    }
+
+    function handleLandingBackdrop(e) {
+      if (e.target.id === 'modal-install-apk-guide') {
+        closeInstallApkModal();
+      }
+    }
+
+    function triggerLandingInstall() {
+      if (landingDeferredPrompt) {
+        landingDeferredPrompt.prompt();
+        landingDeferredPrompt.userChoice.then((choiceResult) => {
+          if (choiceResult && choiceResult.outcome === 'accepted') {
+            showToast('📲 Pemasangan aplikasi sedang diproses...');
+          }
+          landingDeferredPrompt = null;
+          closeInstallApkModal();
+        });
+      } else {
+        window.location.href = 'index.html';
+      }
+    }
+
     function copyLandingUrl() {
       const url = document.getElementById('landing-phone-url').innerText;
-      if (navigator.clipboard) {
-        navigator.clipboard.writeText(url).then(() => showToast());
+      copyTextToClipboard(url, '📋 Link Berhasil Disalin! Silakan bagikan ke WhatsApp pasangan.');
+    }
+
+    function copyLandingModalUrl() {
+      const input = document.getElementById('landing-modal-url');
+      if (!input) return;
+      copyTextToClipboard(input.value, '📋 Link Berhasil Disalin! Silakan bagikan ke WhatsApp pasangan.');
+    }
+
+    function copyTextToClipboard(text, successMsg) {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(() => showToast(successMsg));
       } else {
         const t = document.createElement('textarea');
-        t.value = url;
+        t.value = text;
         document.body.appendChild(t);
         t.select();
         document.execCommand('copy');
         document.body.removeChild(t);
-        showToast();
+        showToast(successMsg);
       }
     }
 
-    function showToast() {
+    function showToast(msg) {
       const el = document.getElementById('toast');
+      if (msg) el.innerText = msg;
       el.classList.add('show');
-      setTimeout(() => el.classList.remove('show'), 2600);
+      setTimeout(() => el.classList.remove('show'), 2800);
     }
   </script>
 </body>

@@ -292,11 +292,91 @@ window.addEventListener('beforeinstallprompt', (e) => {
   if (banner) banner.classList.remove('hidden');
 });
 
+function triggerPwaInstall() {
+  if (deferredPrompt) {
+    deferredPrompt.prompt();
+    deferredPrompt.userChoice.then((choiceResult) => {
+      if (choiceResult && choiceResult.outcome === 'accepted') {
+        const banner = document.getElementById('pwa-install-banner');
+        if (banner) banner.classList.add('hidden');
+        showLiveToast('📲 Aplikasi Dipasang!', 'SakuKita sedang dipasang ke menu HP Anda.');
+      }
+      deferredPrompt = null;
+    });
+  } else {
+    openInstallGuideModal();
+  }
+}
+
+function openInstallGuideModal() {
+  const ipField = document.getElementById('phone-app-url');
+  if (ipField && window.location.protocol.startsWith('http')) {
+    ipField.value = window.location.origin + window.location.pathname;
+  }
+  openModal('modal-pwa-guide');
+}
+
+function dismissPwaBanner() {
+  const banner = document.getElementById('pwa-install-banner');
+  if (banner) banner.classList.add('hidden');
+  sessionStorage.setItem('sakukita_pwa_dismissed', 'true');
+}
+
+function copyPhoneUrl() {
+  const urlInput = document.getElementById('phone-app-url');
+  if (!urlInput) return;
+  const url = urlInput.value;
+  const onCopied = () => {
+    if (navigator.vibrate) navigator.vibrate([40]);
+    showLiveToast('📋 Tautan Berhasil Disalin!', 'Kirim tautan ini ke WhatsApp pasangan untuk langsung dipasang di HP.');
+  };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(url).then(onCopied).catch(() => {
+      fallbackCopy(url, onCopied);
+    });
+  } else {
+    fallbackCopy(url, onCopied);
+  }
+}
+
+function fallbackCopy(text, callback) {
+  try {
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.style.position = 'fixed';
+    textarea.style.left = '-9999px';
+    textarea.style.top = '-9999px';
+    document.body.appendChild(textarea);
+    textarea.focus();
+    textarea.select();
+    const successful = document.execCommand('copy');
+    document.body.removeChild(textarea);
+    if (successful && callback) callback();
+  } catch (err) {
+    console.error('Fallback copy error:', err);
+    if (callback) callback();
+  }
+}
+
 // Initialization
 document.addEventListener('DOMContentLoaded', () => {
   // Register Service Worker for ready-to-use PWA
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js').catch(err => console.log('SW registration error', err));
+  }
+
+  // Handle PWA Banner display on mobile/browser if not already installed as standalone
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+  const isDismissed = sessionStorage.getItem('sakukita_pwa_dismissed') === 'true';
+  const banner = document.getElementById('pwa-install-banner');
+  if (banner && !isStandalone && !isDismissed) {
+    banner.classList.remove('hidden');
+  }
+
+  // Update dynamic URL in install guide modal if on HTTP
+  const ipField = document.getElementById('phone-app-url');
+  if (ipField && window.location.protocol.startsWith('http')) {
+    ipField.value = window.location.origin + window.location.pathname;
   }
 
   loadData();
@@ -2226,31 +2306,7 @@ function exportPersonalPdf() {
   );
 }
 
-// Copy Localhost Phone URL helper
-function copyPhoneUrl() {
-  const urlInput = document.getElementById('phone-app-url');
-  const url = urlInput ? urlInput.value : 'http://192.168.101.71:8080';
 
-  if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(url).then(() => {
-      showLiveToast('📋 Tautan HP Disalin', 'Buka di Chrome/Safari pada HP Anda yang terhubung ke Wi-Fi yang sama.');
-    }).catch(() => {
-      fallbackCopyText(url);
-    });
-  } else {
-    fallbackCopyText(url);
-  }
-}
-
-function fallbackCopyText(text) {
-  const tempInput = document.createElement('textarea');
-  tempInput.value = text;
-  document.body.appendChild(tempInput);
-  tempInput.select();
-  document.execCommand('copy');
-  document.body.removeChild(tempInput);
-  showLiveToast('📋 Tautan HP Disalin', 'Buka di Chrome/Safari pada HP Anda yang terhubung ke Wi-Fi yang sama.');
-}
 
 function formatBankDate(date) {
   const pad = (n) => String(n).padStart(2, '0');
@@ -3017,6 +3073,11 @@ function openAddWalletModal() {
     return;
   }
   document.getElementById('modal-wallet').classList.remove('hidden');
+}
+
+function openModal(modalId) {
+  const el = document.getElementById(modalId);
+  if (el) el.classList.remove('hidden');
 }
 
 function closeModal(modalId) {

@@ -189,6 +189,22 @@ body {
   white-space: nowrap;
 }
 
+.btn-pwa-dismiss {
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 1.25rem;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0 4px;
+  line-height: 1;
+  transition: color 0.2s ease;
+}
+
+.btn-pwa-dismiss:hover {
+  color: #ffffff;
+}
+
 /* ==========================================================================
    Header Mobile (FinTech DANA / OVO Style)
    ========================================================================== */

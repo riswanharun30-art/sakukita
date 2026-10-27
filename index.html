@@ -30,8 +30,8 @@
       <div class="pwa-banner-left">
         <img src="icon-192.png" width="32" height="32" class="pwa-app-logo" alt="SakuKita Icon">
         <div class="pwa-text-box">
-          <strong class="pwa-title">Pasang SakuKita</strong>
-          <span class="pwa-sub">Aplikasi siap pakai di layar HP Anda</span>
+          <strong class="pwa-title">Pasang SakuKita ke HP</strong>
+          <span class="pwa-sub">Siap pakai di layar HP tanpa unduh APK manual</span>
         </div>
       </div>
       <div class="pwa-banner-actions">
@@ -39,8 +39,9 @@
           <span>📲 Pasang</span>
         </button>
         <button class="btn-pwa-guide" onclick="openInstallGuideModal()" title="Panduan Pasang di HP">
-          <span>ℹ️</span>
+          <span>ℹ️ Panduan</span>
         </button>
+        <button class="btn-pwa-dismiss" onclick="dismissPwaBanner()" title="Tutup Banner">&times;</button>
       </div>
     </div>
 
@@ -1359,13 +1360,12 @@ ALTER PUBLICATION supabase_realtime ADD TABLE spaces;</code></pre>
             </div>
           </div>
           <div class="ip-address-display-box">
-            <span class="ip-label">Tautan Langsung Buka di Browser HP:</span>
+            <span class="ip-label">Tautan Online Resmi (Bisa Dibuka di Mana Saja):</span>
             <div class="ip-input-row">
-              <input type="text" id="phone-app-url" class="ip-field" value="http://192.168.101.71:8080" readonly>
+              <input type="text" id="phone-app-url" class="ip-field" value="https://riswanharun30-art.github.io/sakukita/index.html" readonly>
               <button type="button" class="btn-copy-ip" onclick="copyPhoneUrl()">Salin Link HP</button>
             </div>
-            <span class="ip-hint">💡 <b>Langkah Mudah:</b> Hubungkan HP ke Wi-Fi / Hotspot yang sama dengan laptop. Buka
-              link di atas lewat Chrome di HP, lalu tap <b>"Pasang Sekarang"</b>!</span>
+            <span class="ip-hint">💡 <b>Langkah Mudah:</b> Buka link resmi di atas lewat browser Chrome atau Safari di HP pasangan Anda, lalu tap <b>"Pasang Sekarang"</b>!</span>
           </div>
 
           <div class="cloud-hosting-box">
