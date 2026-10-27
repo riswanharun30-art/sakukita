@@ -178,7 +178,7 @@
             <div class="action-circle-icon bg-green">📥</div>
             <span class="action-circle-label">Unduh</span>
           </button>
-          <button type="button" class="quick-action-circle-btn action-btn-sync" onclick="openGoogleSheetsModal()"
+          <button type="button" class="quick-action-circle-btn action-btn-sync" onclick="openSyncOnlyModal()"
             title="Koneksi & Sinkronisasi Google Sheets">
             <div class="action-circle-icon bg-cyan" id="quick-action-sync-icon">
               🔄
@@ -190,13 +190,20 @@
       </section>
 
       <!-- Monthly Budget Section -->
-      <section class="budget-fintech-card">
+      <section class="budget-fintech-card" id="budget-card" onclick="openBudgetModal()" title="Klik untuk atur atau ubah target anggaran bulanan">
         <div class="budget-info">
-          <span>Target Anggaran Bulanan: <b id="budget-limit-text">Rp 0</b></span>
+          <span id="budget-label-row" style="display:flex; align-items:center; gap:6px;">
+            <span id="budget-title-text">Target Anggaran Bulanan:</span>
+            <b id="budget-limit-text">Rp 0</b>
+            <span class="budget-edit-badge" title="Atur Anggaran">✏️</span>
+          </span>
           <span id="budget-percentage" class="budget-pct">0%</span>
         </div>
         <div class="progress-bar-bg">
           <div id="budget-progress-fill" class="progress-bar-fill" style="width: 0%;"></div>
+        </div>
+        <div id="budget-sub-info" class="budget-sub-info">
+          <span style="font-size:0.72rem; color:var(--text-muted);">Klik di sini untuk pasang batas pengeluaran bulanan</span>
         </div>
       </section>
 
@@ -486,7 +493,8 @@
         <div class="form-group">
           <label for="wallet-name">Nama Dompet / Rekening</label>
           <input type="text" id="wallet-name" class="form-control"
-            placeholder="Contoh: BCA Tabungan, Rekening Mandiri, Kas Tunai" required>
+            placeholder="Contoh: BCA Tabungan, DANA, OVO, Gopay, Kas Tunai" required
+            oninput="handleWalletNameInput(this)">
         </div>
 
         <div class="form-group">
@@ -498,45 +506,76 @@
           </div>
         </div>
 
-        <!-- Biaya Admin Bank Bulanan Otomatis (Opsional) -->
-        <div class="form-group">
-          <div class="label-with-badge-row">
-            <label for="wallet-admin-fee">Biaya Admin Bank Bulanan (Opsional)</label>
-            <span class="badge-feature-pill">⚡ Auto-Potong Tiap Bulan</span>
+        <!-- Pilihan Centang Bebas Biaya Admin (Khusus E-Wallet & Kas) -->
+        <div class="form-group" style="margin-bottom: 12px;">
+          <div class="checkbox-pill-card" onclick="toggleWalletNoAdminFee()"
+            style="display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: 10px; cursor: pointer; transition: all 0.2s ease;">
+            <div style="display: flex; align-items: flex-start; gap: 10px;">
+              <input type="checkbox" id="wallet-no-admin"
+                style="width: 18px; height: 18px; accent-color: #10b981; cursor: pointer; margin-top: 2px;"
+                onchange="handleWalletNoAdminChange(this.checked)" onclick="event.stopPropagation()">
+              <div>
+                <label for="wallet-no-admin"
+                  style="font-size: 0.84rem; font-weight: 700; color: #a7f3d0; cursor: pointer; display: block; margin: 0;">
+                  Bebas Biaya Admin (E-Wallet / Kas Tunai)
+                </label>
+                <span style="font-size: 0.72rem; color: var(--text-muted); display: block; margin-top: 2px;">
+                  Centang opsi ini jika dompet adalah E-Wallet (DANA, OVO, GoPay, ShopeePay) atau Kas Tunai tanpa biaya bulanan (Rp 0).
+                </span>
+              </div>
+            </div>
+            <span style="font-size: 1.2rem; flex-shrink: 0; margin-left: 6px;">📱</span>
           </div>
-          <div class="currency-input-wrapper">
-            <span class="currency-prefix">Rp</span>
-            <input type="text" id="wallet-admin-fee" class="form-control" placeholder="0 (Contoh: 14.000 untuk BCA)"
-              inputmode="numeric" oninput="formatCurrencyInput(this)">
-          </div>
-          <span class="field-hint">Jika diisi (misal: Rp 14.000), aplikasi akan otomatis memotong saldo dompet ini
-            setiap bulan sebagai mutasi pengeluaran biaya admin bank.</span>
         </div>
 
-        <!-- Kolom Pilihan Tanggal Pemotongan Bulanan -->
-        <div class="form-group">
-          <label for="wallet-admin-day">Dipotong Setiap Tanggal:</label>
-          <div class="input-with-icon">
-            <span class="input-prefix-icon">📅</span>
-            <select id="wallet-admin-day" class="form-control">
-              <option value="25" selected>Tanggal 25 (Standar BCA)</option>
-              <option value="akhir">Akhir Bulan (Tanggal Terakhir)</option>
-              <option value="1">Tanggal 1 (Awal Bulan)</option>
-              <option value="5">Tanggal 5</option>
-              <option value="10">Tanggal 10</option>
-              <option value="15">Tanggal 15</option>
-              <option value="20">Tanggal 20</option>
-              <option value="21">Tanggal 21</option>
-              <option value="22">Tanggal 22</option>
-              <option value="23">Tanggal 23</option>
-              <option value="24">Tanggal 24</option>
-              <option value="26">Tanggal 26</option>
-              <option value="27">Tanggal 27</option>
-              <option value="28">Tanggal 28</option>
-            </select>
+        <!-- Biaya Admin Bank Bulanan Otomatis (Opsional - Terbuka jika bukan E-Wallet) -->
+        <div id="wallet-admin-fee-block">
+          <div class="form-group">
+            <div class="label-with-badge-row">
+              <label for="wallet-admin-fee">Biaya Admin Bank Bulanan (Opsional)</label>
+              <span class="badge-feature-pill">⚡ Auto-Potong Tiap Bulan</span>
+            </div>
+            <div class="currency-input-wrapper">
+              <span class="currency-prefix">Rp</span>
+              <input type="text" id="wallet-admin-fee" class="form-control" placeholder="0 (Contoh: 14.000 untuk BCA)"
+                inputmode="numeric" oninput="formatCurrencyInput(this)">
+            </div>
+            <span class="field-hint">Jika diisi (misal: Rp 14.000), aplikasi akan otomatis memotong saldo dompet ini
+              setiap bulan sebagai mutasi pengeluaran biaya admin bank.</span>
           </div>
-          <span class="field-hint">Pilih tanggal pemotongan bulanan yang sesuai dengan mutasi asli rekening bank
-            Anda.</span>
+
+          <!-- Kolom Pilihan Tanggal Pemotongan Bulanan -->
+          <div class="form-group">
+            <label for="wallet-admin-day">Dipotong Setiap Tanggal:</label>
+            <div class="input-with-icon">
+              <span class="input-prefix-icon">📅</span>
+              <select id="wallet-admin-day" class="form-control">
+                <option value="25" selected>Tanggal 25 (Standar BCA)</option>
+                <option value="akhir">Akhir Bulan (Tanggal Terakhir)</option>
+                <option value="1">Tanggal 1 (Awal Bulan)</option>
+                <option value="5">Tanggal 5</option>
+                <option value="10">Tanggal 10</option>
+                <option value="15">Tanggal 15</option>
+                <option value="20">Tanggal 20</option>
+                <option value="21">Tanggal 21</option>
+                <option value="22">Tanggal 22</option>
+                <option value="23">Tanggal 23</option>
+                <option value="24">Tanggal 24</option>
+                <option value="26">Tanggal 26</option>
+                <option value="27">Tanggal 27</option>
+                <option value="28">Tanggal 28</option>
+              </select>
+            </div>
+            <span class="field-hint">Pilih tanggal pemotongan bulanan yang sesuai dengan mutasi asli rekening bank
+              Anda.</span>
+          </div>
+        </div>
+
+        <!-- Banner Info ketika Bebas Admin Aktif -->
+        <div id="wallet-free-admin-notice" class="hidden"
+          style="margin-bottom: 14px; padding: 10px 12px; background: rgba(16, 185, 129, 0.1); border: 1px dashed rgba(16, 185, 129, 0.35); border-radius: 8px; font-size: 0.74rem; color: #a7f3d0; display: flex; align-items: center; gap: 8px;">
+          <span style="font-size: 1rem;">✅</span>
+          <span><b>Dompet Bebas Biaya Admin:</b> Saldo dompet ini tidak akan dipotong biaya admin bulanan (Rp 0).</span>
         </div>
 
         <div class="form-group">
@@ -855,6 +894,148 @@
     </div>
   </div>
 
+  <!-- Modal 3B: Menu Khusus Sinkron (HANYA Berisi Google Spreadsheet, Webhook & Skrip - Tanpa Pusat Unduh) -->
+  <div id="modal-sync" class="modal-backdrop hidden" onclick="handleBackdropClick(event, 'modal-sync')">
+    <div class="modal-sheet modal-large">
+      <div class="modal-handle"></div>
+      <div class="modal-header">
+        <div class="modal-header-title-row">
+          <span class="gsheets-header-icon">📊</span>
+          <div>
+            <h3>Sinkronisasi Google Spreadsheet</h3>
+            <span class="modal-header-sub">Koneksi Webhook &amp; Kode Script Auto-Sync Real-Time</span>
+          </div>
+        </div>
+        <button class="modal-close" onclick="closeModal('modal-sync')">&times;</button>
+      </div>
+
+      <div class="sheets-modal-content">
+        <!-- 1. Status & Auto Connection Card -->
+        <div class="gsheets-status-card">
+          <div class="gsheets-status-top">
+            <div class="gsheets-status-info">
+              <span class="gsheets-status-dot"></span>
+              <strong>Status: Sinkronisasi Google Sheets</strong>
+            </div>
+            <span class="gsheets-badge-live">Memeriksa...</span>
+          </div>
+          <p class="gsheets-status-desc gsheets-status-desc-text">
+            Masukkan URL Webhook Google Apps Script di bawah agar setiap transaksi otomatis tercatat di Google Spreadsheet Anda.
+          </p>
+          <button type="button" class="btn-test-webhook hidden" onclick="testGoogleSheetsWebhook()">
+            <span>🧪 Uji Coba Kirim Data Tes ke Google Spreadsheet</span>
+          </button>
+        </div>
+
+        <!-- 2. Form Sambungkan Webhook (Auto-Sync) -->
+        <div class="settings-block" style="margin-top: 14px;">
+          <h4 class="settings-block-title" style="margin-bottom: 8px;">🔗 Pengaturan Webhook Auto-Sync</h4>
+          <form id="form-sync-only-config" onsubmit="handleSaveSheetsConfig(event)">
+            <div class="form-group" style="margin-bottom: 12px;">
+              <label for="cfg-webhook-url-sync" style="display:flex; justify-content:space-between; align-items:center;">
+                <span>URL Webhook Google Apps Script:</span>
+                <span class="field-hint" style="margin:0; font-size:0.75rem; color:#60a5fa;">Wajib berakhiran /exec</span>
+              </label>
+              <input type="url" id="cfg-webhook-url-sync" class="form-control"
+                placeholder="https://script.google.com/macros/s/.../exec" required
+                style="font-size:0.85rem; padding: 10px 12px;">
+              <span class="field-hint" style="margin-top:4px; font-size:0.72rem; color:var(--text-muted);">
+                Dapatkan URL ini setelah klik <b>Deploy (Terapkan)</b> &gt; <b>Penerapan Baru</b> di Google Apps Script.
+              </span>
+            </div>
+
+            <!-- Optional Custom Sheet URL -->
+            <div class="form-group" style="margin-bottom: 12px;">
+              <label for="cfg-sheet-url-sync" style="font-size:0.8rem; color:var(--text-secondary);">
+                Link Google Spreadsheet Anda (Opsional):
+              </label>
+              <input type="url" id="cfg-sheet-url-sync" class="form-control"
+                placeholder="https://docs.google.com/spreadsheets/d/..." style="font-size:0.85rem; padding: 9px 12px;">
+            </div>
+
+            <div class="toggle-row"
+              style="margin-bottom: 14px; padding: 10px 12px; background: rgba(255,255,255,0.03); border-radius: 8px;">
+              <div>
+                <strong style="font-size:0.85rem;">Auto-Sync Real-Time</strong>
+                <p style="font-size:0.75rem; color:var(--text-muted); margin:0;">Kirim mutasi seketika setiap kali transaksi dicatat atau dihapus.</p>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="cfg-autosync-toggle-sync" checked>
+                <span class="slider"></span>
+              </label>
+            </div>
+
+            <button type="submit" class="btn-save-settings"
+              style="width:100%; padding: 12px; font-weight:700; background:linear-gradient(135deg, #10b981, #059669);">
+              💾 Simpan &amp; Sambungkan Webhook
+            </button>
+          </form>
+        </div>
+
+        <!-- 3. Panduan & Script Gratis Google Apps Script (12 Kolom Lengkap) - PENTING! -->
+        <div class="settings-block" style="margin-top: 14px;">
+          <h4 class="settings-block-title" style="margin-bottom: 6px;">📖 Panduan &amp; Kode Script (12 Kolom Lengkap)</h4>
+          <div style="font-size: 0.8rem; color: var(--text-secondary); line-height: 1.5; margin-bottom: 12px;">
+            <p style="margin: 0 0 6px 0;">1. Buka file Google Sheets Anda di browser &gt; pilih menu <b>Ekstensi</b> &gt; <b>Apps Script</b>.</p>
+            <p style="margin: 0 0 6px 0;">2. Hapus kode yang ada, tempel kode di bawah ini, lalu klik <b>Deploy (Terapkan)</b> &gt; <b>Penerapan baru</b>.</p>
+            <p style="margin: 0 0 6px 0;">3. Pilih jenis: <b>Aplikasi Web</b>, Jalankan sebagai: <b>Saya</b>, Akses: <b>Siapa saja</b>, lalu salin URL Webhook dan tempel di formulir atas.</p>
+          </div>
+
+          <div class="code-block-wrapper">
+            <pre><code id="apps-script-code-sync">function doPost(e) {
+  try {
+    var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+    var data = JSON.parse(e.postData.contents);
+
+    // 1. Jika spreadsheet masih kosong, buatkan 12 judul kolom lengkap
+    if (sheet.getLastRow() === 0) {
+      sheet.appendRow([
+        'Waktu Transaksi',
+        'Nama Pemilik',
+        'Buku Kas',
+        'Tipe Mutasi',
+        'Kategori',
+        'Dompet / Rekening',
+        'Nominal Mutasi',
+        'Keterangan Transaksi',
+        'Total Pemasukan',
+        'Total Pengeluaran',
+        'Saldo Kas Tersedia',
+        'Daftar Kantong & Saldo Terakhir'
+      ]);
+      sheet.getRange(1, 1, 1, 12).setFontWeight("bold").setBackground("#e2e8f0");
+    }
+
+    // 2. Tambah baris transaksi seketika (Snapshot Keuangan Lengkap)
+    sheet.appendRow([
+      data.timestamp || new Date().toLocaleString('id-ID'),
+      data.userName || 'Pengguna',
+      data.spaceName || 'Buku Kas Utama',
+      data.type === 'INCOME' ? 'Pemasukan (+)' : (data.type === 'EXPENSE' ? 'Pengeluaran (-)' : data.type),
+      data.category || '-',
+      data.walletName || 'Dompet',
+      data.amountFormatted || data.amount || '0',
+      data.note || '-',
+      data.totalIncomeFormatted || '-',
+      data.totalExpenseFormatted || '-',
+      data.totalBalanceFormatted || '-',
+      data.walletsSummary || '-'
+    ]);
+
+    return ContentService.createTextOutput(JSON.stringify({ status: "success" }))
+      .setMimeType(ContentService.MimeType.JSON);
+  } catch (err) {
+    return ContentService.createTextOutput(JSON.stringify({ status: "error", message: err.toString() }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}</code></pre>
+            <button class="btn-copy-code" onclick="copyAppsScriptCode()">📋 Salin Kode Apps Script (12 Kolom)</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Modal: Pusat Unduh Laporan Keuangan (Khusus 4 Menu Unduh) -->
   <div id="modal-download" class="modal-backdrop hidden" onclick="handleBackdropClick(event, 'modal-download')">
     <div class="modal-sheet">
@@ -1119,6 +1300,177 @@ ALTER PUBLICATION supabase_realtime ADD TABLE spaces;</code></pre>
       <div id="collab-content-area" class="collab-modal-content">
         <!-- Rendered dynamically via JS based on active user and active space -->
       </div>
+    </div>
+  </div>
+
+  <!-- Modal: Atur Target Anggaran Bulanan -->
+  <div id="modal-budget" class="modal-backdrop hidden" onclick="handleBackdropClick(event, 'modal-budget')">
+    <div class="modal-sheet">
+      <div class="modal-handle"></div>
+      <div class="modal-header">
+        <div class="modal-header-title-row">
+          <span class="collab-header-icon" style="background: rgba(99, 102, 241, 0.15); color: #818cf8;">🎯</span>
+          <div>
+            <h3>Target Anggaran Bulanan</h3>
+            <span class="modal-header-sub">Batas maksimal pengeluaran buku kas bulan ini</span>
+          </div>
+        </div>
+        <button class="modal-close" onclick="closeModal('modal-budget')">&times;</button>
+      </div>
+
+      <form id="form-budget" onsubmit="handleSaveBudget(event)">
+        <div class="budget-modal-summary"
+          style="background: var(--bg-surface-elevated); padding: 12px 14px; border-radius: 12px; margin-bottom: 16px; border: 1px solid var(--border-color);">
+          <div style="display:flex; justify-content:space-between; font-size:0.8rem; margin-bottom:6px; color:var(--text-muted);">
+            <span>Pengeluaran Bulan Ini:</span>
+            <strong id="modal-budget-current-expense" style="color:#f43f5e;">Rp 0</strong>
+          </div>
+          <div style="display:flex; justify-content:space-between; font-size:0.8rem; color:var(--text-muted);">
+            <span>Status Anggaran:</span>
+            <strong id="modal-budget-current-status" style="color:#10b981;">Aman</strong>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="budget-amount-input">Batas Nominal Target Bulanan:</label>
+          <div class="currency-input-wrapper">
+            <span class="currency-prefix">Rp</span>
+            <input type="text" id="budget-amount-input" class="form-control" placeholder="0 (Contoh: 5.000.000)"
+              inputmode="numeric" oninput="formatCurrencyInput(this)" required>
+          </div>
+          <span class="field-hint">
+            Batas maksimal pengeluaran buku kas ini setiap bulannya. Isi Rp 0 jika tidak ingin membatasi anggaran.
+          </span>
+        </div>
+
+        <!-- Tombol Preset Cepat -->
+        <div class="form-group">
+          <label style="font-size:0.75rem; color:var(--text-muted); margin-bottom:6px; display:block;">Pilihan Cepat Target:</label>
+          <div style="display:flex; gap:6px; flex-wrap:wrap;">
+            <button type="button" class="btn-preset-pill" onclick="setBudgetPreset(3000000)">Rp 3 Juta</button>
+            <button type="button" class="btn-preset-pill" onclick="setBudgetPreset(5000000)">Rp 5 Juta</button>
+            <button type="button" class="btn-preset-pill" onclick="setBudgetPreset(7500000)">Rp 7.5 Juta</button>
+            <button type="button" class="btn-preset-pill" onclick="setBudgetPreset(10000000)">Rp 10 Juta</button>
+            <button type="button" class="btn-preset-pill" onclick="setBudgetPreset(0)" style="border-color:rgba(244,63,94,0.3); color:#f43f5e;">Matikan (Rp 0)</button>
+          </div>
+        </div>
+
+        <div class="modal-form-actions">
+          <button type="button" class="btn-cancel" onclick="closeModal('modal-budget')">Batal</button>
+          <button type="submit" class="btn-submit-tx">Simpan Target</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Cari Undangan Masuk dari Pasangan -->
+  <div id="modal-find-invite" class="modal-backdrop hidden" onclick="handleBackdropClick(event, 'modal-find-invite')">
+    <div class="modal-sheet">
+      <div class="modal-handle"></div>
+      <div class="modal-header">
+        <div class="modal-header-title-row">
+          <span class="collab-header-icon" style="background: rgba(16, 185, 129, 0.15); color: #34d399;">🔍</span>
+          <div>
+            <h3>Cari Undangan Masuk</h3>
+            <span class="modal-header-sub">Hubungkan Buku Kas Pasangan Antar-HP</span>
+          </div>
+        </div>
+        <button class="modal-close" onclick="closeModal('modal-find-invite')">&times;</button>
+      </div>
+
+      <div style="padding: 4px 0 16px 0;">
+        <div style="background: rgba(59, 130, 246, 0.08); border: 1px solid rgba(59, 130, 246, 0.2); border-radius: 12px; padding: 12px; margin-bottom: 16px; font-size: 0.8rem; color: #93c5fd; line-height: 1.45;">
+          💡 <b>Cara Terhubung dengan Pasangan:</b><br>
+          Masukkan email Google yang didaftarkan pasangan Anda di menu <i>Izin Akses & Kolaborasi</i> buku kas mereka, lalu klik <b>Cari di Cloud</b>.
+        </div>
+
+        <!-- Form Cari via Email -->
+        <form id="form-find-cloud-invite" onsubmit="handleExecuteFindInvite(event)">
+          <div class="form-group">
+            <label for="find-invite-email">Email Anda (yang didaftarkan pasangan):</label>
+            <div class="input-with-icon">
+              <span class="input-prefix-icon">📧</span>
+              <input type="email" id="find-invite-email" class="form-control" placeholder="nama@gmail.com" required>
+            </div>
+            <span class="field-hint">Sistem akan memeriksa undangan buku kas di cloud yang ditujukan ke email ini.</span>
+          </div>
+
+          <button type="submit" id="btn-submit-find-cloud" class="btn-submit-tx" style="margin-top: 10px;">
+            <span id="btn-submit-find-text">🔍 Cari Undangan di Cloud Sekarang</span>
+          </button>
+        </form>
+
+        <!-- Hasil status pencarian -->
+        <div id="find-invite-result-box" class="hidden" style="margin-top: 14px;"></div>
+
+        <!-- Tempel Link WhatsApp -->
+        <div style="margin-top: 20px; padding-top: 16px; border-top: 1px dashed var(--border-color);">
+          <div style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">
+            Atau Tempel Tautan WhatsApp dari Pasangan:
+          </div>
+          <div style="display: flex; gap: 8px;">
+            <input type="text" id="paste-invite-token-input" class="form-control" placeholder="Tempel tautan https://... di sini" style="font-size: 0.8rem;">
+            <button type="button" class="btn-preset-pill" onclick="handleJoinViaPastedToken()" style="white-space: nowrap; padding: 0 14px; background: #3b82f6; color: white; border-color: #3b82f6;">
+              🚀 Gabung
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  <!-- Modal: Ubah Nama Panggilan Buku Kas Pantauan (Khusus Pemantau) -->
+  <div id="modal-rename-monitored" class="modal-backdrop hidden" onclick="handleBackdropClick(event, 'modal-rename-monitored')">
+    <div class="modal-sheet">
+      <div class="modal-handle"></div>
+      <div class="modal-header">
+        <div class="modal-header-title-row">
+          <span class="collab-header-icon" style="background: rgba(59, 130, 246, 0.15); color: #60a5fa;">✏️</span>
+          <div>
+            <h3>Ubah Nama Panggilan Buku Kas</h3>
+            <span class="modal-header-sub">Sesuaikan sebutan buku kas &amp; pemilik di HP Anda</span>
+          </div>
+        </div>
+        <button class="modal-close" onclick="closeModal('modal-rename-monitored')">&times;</button>
+      </div>
+
+      <form id="form-rename-monitored" onsubmit="handleSaveRenameMonitored(event)">
+        <input type="hidden" id="rename-space-id" value="">
+
+        <div class="form-group">
+          <label for="rename-owner-name">Panggilan Pemilik Buku Kas:</label>
+          <input type="text" id="rename-owner-name" class="form-control" placeholder="Contoh: Istri / Kakak / Adik / Suami" required>
+          <span class="field-hint">Nama ini akan muncul pada kartu saldo, riwayat mutasi, dan daftar pilihan buku kas.</span>
+        </div>
+
+        <!-- Quick suggestion pills -->
+        <div class="form-group" style="margin-bottom: 14px;">
+          <label style="font-size:0.75rem; color:var(--text-muted); margin-bottom:6px; display:block;">Pilihan Cepat Panggilan:</label>
+          <div style="display:flex; gap:6px; flex-wrap:wrap;">
+            <button type="button" class="btn-preset-pill" onclick="setRenameOwnerPreset('Istri')">Istri</button>
+            <button type="button" class="btn-preset-pill" onclick="setRenameOwnerPreset('Suami')">Suami</button>
+            <button type="button" class="btn-preset-pill" onclick="setRenameOwnerPreset('Kakak')">Kakak</button>
+            <button type="button" class="btn-preset-pill" onclick="setRenameOwnerPreset('Adik')">Adik</button>
+            <button type="button" class="btn-preset-pill" onclick="setRenameOwnerPreset('Ayah')">Ayah</button>
+            <button type="button" class="btn-preset-pill" onclick="setRenameOwnerPreset('Bunda')">Bunda</button>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="rename-space-name">Nama Tampilan Buku Kas:</label>
+          <input type="text" id="rename-space-name" class="form-control" placeholder="Contoh: Buku Kas Istri / Buku Kas Kakak" required>
+        </div>
+
+        <div class="modal-form-actions">
+          <button type="button" class="btn-cancel" onclick="closeModal('modal-rename-monitored')">Batal</button>
+          <button type="submit" class="btn-submit-tx">Simpan Nama</button>
+        </div>
+
+        <!-- Tombol Berhenti Memantau -->
+        <div style="margin-top: 18px; padding-top: 14px; border-top: 1px dashed rgba(244, 63, 94, 0.25); text-align: center;">
+          <button type="button" class="btn-preset-pill" onclick="handleLeaveMonitoredSpace()" style="border-color: rgba(244,63,94,0.3); color: #f87171; background: transparent; padding: 6px 14px;">
+            🚪 Hapus Buku Kas Ini dari HP Saya
+          </button>
+        </div>
+      </form>
     </div>
   </div>
 

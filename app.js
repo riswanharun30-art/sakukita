@@ -401,9 +401,10 @@ document.addEventListener('DOMContentLoaded', () => {
   processUrlJoinSpaceParam();
   setupCloudSyncLoop();
 
-  // If not logged in or active user email is empty: Show Google Login
+  // If not logged in or active user email is empty: Show Google Login (kecuali jika membuka tautan join_space)
   const currentUser = getActiveUser();
-  if (!localStorage.getItem('sakukita_logged_in') || !currentUser.email) {
+  const hasJoinParam = new URLSearchParams(window.location.search).has('join_space');
+  if (!hasJoinParam && (!localStorage.getItem('sakukita_logged_in') || !currentUser.email)) {
     setTimeout(() => {
       openGoogleLoginModal();
     }, 400);
@@ -597,13 +598,16 @@ function renderActiveUserProfile() {
 
   const subdetail = document.getElementById('user-profile-subdetail');
   if (subdetail) {
-    subdetail.innerHTML = `
-      <span>Terhubung sebagai:</span>
-      <span class="google-account-badge" onclick="openGoogleLoginModal()" style="cursor:pointer;" title="Klik untuk ganti akun Google">
-        <span class="google-icon-mini">G</span>
-        <span>${escapeHtml(user.email)}</span>
-      </span>
-    `;
+    if (user.email && user.email.trim() !== '') {
+      subdetail.innerHTML = `
+        <span style="font-size:0.78rem; color:var(--text-muted);">Terhubung sebagai:</span>
+        <span class="google-account-badge" onclick="closeAccountModal(); openEditProfileModal();" style="cursor:pointer;" title="Klik untuk ubah email profil">
+          <span>${escapeHtml(user.email)}</span>
+        </span>
+      `;
+    } else {
+      subdetail.innerHTML = '';
+    }
   }
 
   // Update transaction modal creator details
@@ -647,9 +651,9 @@ function updateGoogleSheetsSyncIndicators() {
   const badgePill = document.getElementById('sheets-sync-status-badge');
   const badgeText = document.getElementById('sheets-sync-status-text');
   const actionDot = document.getElementById('sheets-action-badge-dot');
-  const modalBadgeLive = document.querySelector('#modal-sheets .gsheets-badge-live') || document.querySelector('.gsheets-badge-live');
-  const modalDesc = document.getElementById('gsheets-status-desc-text');
-  const testBtn = document.getElementById('btn-test-webhook-sync');
+  const modalBadgesLive = document.querySelectorAll('.gsheets-badge-live');
+  const modalDescs = document.querySelectorAll('.gsheets-status-desc-text');
+  const testBtns = document.querySelectorAll('.btn-test-webhook');
 
   if (badgePill && badgeText) {
     if (isConnected) {
@@ -676,33 +680,33 @@ function updateGoogleSheetsSyncIndicators() {
     quickSyncLabel.textContent = isConnected ? 'Sinkron ✅' : 'Sinkron';
   }
 
-  if (modalBadgeLive) {
+  modalBadgesLive.forEach(badge => {
     if (isConnected) {
-      modalBadgeLive.textContent = '⚡ Terhubung Otomatis';
-      modalBadgeLive.style.background = 'rgba(16, 185, 129, 0.2)';
-      modalBadgeLive.style.color = '#34d399';
+      badge.textContent = '⚡ Terhubung Otomatis';
+      badge.style.background = 'rgba(16, 185, 129, 0.2)';
+      badge.style.color = '#34d399';
     } else {
-      modalBadgeLive.textContent = 'Belum Ada Webhook';
-      modalBadgeLive.style.background = 'rgba(255, 255, 255, 0.1)';
-      modalBadgeLive.style.color = '#94a3b8';
+      badge.textContent = 'Belum Ada Webhook';
+      badge.style.background = 'rgba(255, 255, 255, 0.1)';
+      badge.style.color = '#94a3b8';
     }
-  }
+  });
 
-  if (modalDesc) {
+  modalDescs.forEach(desc => {
     if (isConnected) {
-      modalDesc.innerHTML = `✅ <b>Koneksi Webhook Aktif:</b> Setiap kali Anda mencatat pengeluaran atau pemasukan di APK SakuKita, data langsung otomatis masuk ke Google Spreadsheet Anda secara seketika (real-time).`;
+      desc.innerHTML = `✅ <b>Koneksi Webhook Aktif:</b> Setiap kali Anda mencatat pengeluaran atau pemasukan di APK SakuKita, data langsung otomatis masuk ke Google Spreadsheet Anda secara seketika (real-time).`;
     } else {
-      modalDesc.innerHTML = `⚠️ <b>Belum Terhubung:</b> Masukkan URL Webhook Google Apps Script di formulir bawah lalu klik <b>Simpan & Sambungkan Webhook</b> agar transaksi otomatis tersinkron ke Google Sheets.`;
+      desc.innerHTML = `⚠️ <b>Belum Terhubung:</b> Masukkan URL Webhook Google Apps Script di formulir bawah lalu klik <b>Simpan & Sambungkan Webhook</b> agar transaksi otomatis tersinkron ke Google Sheets.`;
     }
-  }
+  });
 
-  if (testBtn) {
+  testBtns.forEach(btn => {
     if (isConnected) {
-      testBtn.classList.remove('hidden');
+      btn.classList.remove('hidden');
     } else {
-      testBtn.classList.add('hidden');
+      btn.classList.add('hidden');
     }
-  }
+  });
 }
 
 function testGoogleSheetsWebhook() {
@@ -768,6 +772,8 @@ function getAccessibleSpacesForUser(userId) {
   return Object.values(spaces).filter(space => {
     // Owner can access
     if (space.ownerId === userId) return true;
+    // Any joined remote space on this device (Pasangan, Kakak, Adik, dll)
+    if (space.isRemoteShared) return true;
     // Allowed viewers can access by ID
     if (space.allowedViewers && space.allowedViewers.includes(userId)) return true;
     // Allowed viewers can access by matching email across devices
@@ -872,7 +878,7 @@ function renderAll() {
     viewerDesc.innerHTML = `Buku kas ini milik <strong>${escapeHtml(ownerUser.name)}</strong> (${escapeHtml(ownerUser.email)}). Anda memiliki <strong>Izin Memantau (Read-Only)</strong>.`;
     roleTag.className = 'role-badge role-viewer';
     roleTag.textContent = '👁️ Pantau';
-    spaceOwnerLabel.textContent = `Memantau: ${currentSpace.name}`;
+    spaceOwnerLabel.innerHTML = `Memantau: <b>${escapeHtml(currentSpace.name)}</b> <span class="rename-inline-btn" onclick="openRenameMonitoredModal('${currentSpace.id}')" title="Ubah Nama Panggilan Buku Kas Ini" style="cursor:pointer; margin-left:6px; font-size:0.7rem; color:#93c5fd; text-decoration:underline;">✏️ Ubah Panggilan</span>`;
     addTxBtn.className = 'nav-fab-btn btn-viewer-locked';
     addTxBtnText.textContent = '🔒 Pantau';
     if (addWalletBtn) addWalletBtn.classList.add('disabled');
@@ -903,19 +909,121 @@ function renderOverview(currentSpace) {
   document.getElementById('total-income').textContent = `+${formatRupiah(totalIncome)}`;
   document.getElementById('total-expense').textContent = `-${formatRupiah(totalExpense)}`;
 
-  document.getElementById('budget-limit-text').textContent = formatRupiah(currentSpace.budget);
-  const pct = Math.min(Math.round((totalExpense / currentSpace.budget) * 100), 100);
-  document.getElementById('budget-percentage').textContent = `${pct}%`;
-  document.getElementById('budget-progress-fill').style.width = `${pct}%`;
-
+  const budget = Number(currentSpace.budget) || 0;
+  const budgetLimitText = document.getElementById('budget-limit-text');
+  const budgetPctEl = document.getElementById('budget-percentage');
   const fillEl = document.getElementById('budget-progress-fill');
-  if (pct > 90) {
-    fillEl.style.background = '#f43f5e';
-  } else if (pct > 70) {
-    fillEl.style.background = '#f59e0b';
+  const subInfoEl = document.getElementById('budget-sub-info');
+  const titleEl = document.getElementById('budget-title-text');
+
+  if (budget <= 0) {
+    if (titleEl) titleEl.textContent = 'Target Anggaran:';
+    if (budgetLimitText) budgetLimitText.textContent = 'Belum Diatur';
+    if (budgetPctEl) {
+      budgetPctEl.textContent = 'Atur ✏️';
+      budgetPctEl.className = 'budget-pct badge-inactive';
+    }
+    if (fillEl) {
+      fillEl.style.width = '0%';
+      fillEl.style.background = 'rgba(255, 255, 255, 0.1)';
+    }
+    if (subInfoEl) {
+      subInfoEl.innerHTML = `<span style="font-size:0.71rem; color:var(--text-muted);">Klik untuk atur batas pengeluaran bulanan agar tidak boncos.</span>`;
+    }
   } else {
-    fillEl.style.background = 'linear-gradient(90deg, #10b981 0%, #6366f1 70%, #f43f5e 100%)';
+    const rawPct = Math.round((totalExpense / budget) * 100);
+    const pct = isNaN(rawPct) ? 0 : rawPct;
+    const sisa = budget - totalExpense;
+
+    if (titleEl) titleEl.textContent = 'Target Anggaran:';
+    if (budgetLimitText) budgetLimitText.textContent = formatRupiah(budget);
+    if (budgetPctEl) {
+      budgetPctEl.textContent = `${pct}%`;
+      budgetPctEl.className = `budget-pct ${pct > 100 ? 'badge-danger' : (pct > 75 ? 'badge-warning' : 'badge-safe')}`;
+    }
+    if (fillEl) {
+      fillEl.style.width = `${Math.min(pct, 100)}%`;
+      if (pct > 100) {
+        fillEl.style.background = '#f43f5e';
+      } else if (pct > 75) {
+        fillEl.style.background = '#f59e0b';
+      } else {
+        fillEl.style.background = 'linear-gradient(90deg, #10b981 0%, #3b82f6 100%)';
+      }
+    }
+    if (subInfoEl) {
+      if (sisa >= 0) {
+        subInfoEl.innerHTML = `<span>Terpakai: <b>${formatRupiah(totalExpense)}</b></span> • <span style="color:#34d399;">Sisa: <b>${formatRupiah(sisa)}</b></span>`;
+      } else {
+        subInfoEl.innerHTML = `<span>Terpakai: <b>${formatRupiah(totalExpense)}</b></span> • <span style="color:#f87171;"><b>⚠️ Boncos ${formatRupiah(Math.abs(sisa))}!</b></span>`;
+      }
+    }
   }
+}
+
+// Budget Modal Handlers
+function openBudgetModal() {
+  const currentSpace = getActiveSpace();
+  if (!isOwnerOfCurrentSpace()) {
+    alert('Akses Ditolak: Hanya pemilik buku kas yang dapat mengatur target anggaran bulanan.');
+    return;
+  }
+  
+  let totalExpense = 0;
+  currentSpace.transactions.forEach(t => {
+    if (t.type === 'EXPENSE') totalExpense += Number(t.amount);
+  });
+
+  const currentExpenseEl = document.getElementById('modal-budget-current-expense');
+  if (currentExpenseEl) currentExpenseEl.textContent = formatRupiah(totalExpense);
+
+  const statusEl = document.getElementById('modal-budget-current-status');
+  const budget = Number(currentSpace.budget) || 0;
+  if (statusEl) {
+    if (budget <= 0) {
+      statusEl.textContent = 'Belum Dibatasi';
+      statusEl.style.color = 'var(--text-muted)';
+    } else if (totalExpense > budget) {
+      statusEl.textContent = `Melebihi Target (Boncos ${formatRupiah(totalExpense - budget)})`;
+      statusEl.style.color = '#f43f5e';
+    } else {
+      statusEl.textContent = `Aman (Sisa Kuota: ${formatRupiah(budget - totalExpense)})`;
+      statusEl.style.color = '#10b981';
+    }
+  }
+
+  const input = document.getElementById('budget-amount-input');
+  if (input) {
+    input.value = budget > 0 ? new Intl.NumberFormat('id-ID').format(budget) : '';
+  }
+
+  openModal('modal-budget');
+}
+
+function setBudgetPreset(amount) {
+  const input = document.getElementById('budget-amount-input');
+  if (!input) return;
+  input.value = amount > 0 ? new Intl.NumberFormat('id-ID').format(amount) : '0';
+}
+
+function handleSaveBudget(e) {
+  e.preventDefault();
+  if (!isOwnerOfCurrentSpace()) return;
+  const currentSpace = getActiveSpace();
+  const valStr = document.getElementById('budget-amount-input')?.value.replace(/\D/g, '') || '';
+  const budget = parseFloat(valStr) || 0;
+
+  currentSpace.budget = budget;
+  saveSpaces();
+  broadcastSpaceToCloud(currentSpace);
+  renderAll();
+  closeModal('modal-budget');
+  showLiveToast(
+    '🎯 Target Anggaran Disimpan',
+    budget > 0
+      ? `Batas pengeluaran bulanan berhasil diatur ke ${formatRupiah(budget)}.`
+      : 'Target anggaran dinonaktifkan (bebas tanpa batasan).'
+  );
 }
 
 function renderWallets(currentSpace) {
@@ -933,11 +1041,14 @@ function renderWallets(currentSpace) {
     }
 
     const adminDayLabel = (wallet.adminDay === 'akhir') ? 'Akhir Bln' : `Tgl ${wallet.adminDay || 25}`;
+    const isEwalletOrFree = wallet.isEwallet === true || (!wallet.adminFee && /dana|ovo|gopay|shopee|linkaja|kas|tunai/i.test(wallet.name));
     const adminFeeHtml = (wallet.adminFee && wallet.adminFee > 0)
       ? `<div class="wallet-admin-fee-tag" title="Auto-potong admin bank tiap ${adminDayLabel}">
            <span>⚡ Admin: ${formatRupiah(wallet.adminFee)}/bln (${adminDayLabel})</span>
          </div>`
-      : '';
+      : (isEwalletOrFree ? `<div class="wallet-admin-fee-tag tag-ewallet" title="Bebas Biaya Admin (E-Wallet / Kas)">
+           <span>✨ Bebas Admin</span>
+         </div>` : '');
 
     card.innerHTML = `
       <div class="wallet-top">
@@ -1229,6 +1340,59 @@ function deleteTransaction(txId) {
 }
 
 // Wallet Management & Automatic Monthly Bank Admin Fee Engine
+function toggleWalletNoAdminFee() {
+  const cb = document.getElementById('wallet-no-admin');
+  if (!cb) return;
+  cb.checked = !cb.checked;
+  handleWalletNoAdminChange(cb.checked);
+}
+
+function handleWalletNoAdminChange(isChecked) {
+  const adminFeeBlock = document.getElementById('wallet-admin-fee-block');
+  const noticeBanner = document.getElementById('wallet-free-admin-notice');
+  const adminFeeInput = document.getElementById('wallet-admin-fee');
+  
+  if (isChecked) {
+    if (adminFeeBlock) {
+      adminFeeBlock.style.opacity = '0.35';
+      adminFeeBlock.style.pointerEvents = 'none';
+    }
+    if (adminFeeInput) {
+      adminFeeInput.value = '0';
+      adminFeeInput.disabled = true;
+    }
+    if (noticeBanner) {
+      noticeBanner.classList.remove('hidden');
+    }
+  } else {
+    if (adminFeeBlock) {
+      adminFeeBlock.style.opacity = '1';
+      adminFeeBlock.style.pointerEvents = 'auto';
+    }
+    if (adminFeeInput) {
+      adminFeeInput.disabled = false;
+      if (adminFeeInput.value === '0') adminFeeInput.value = '';
+    }
+    if (noticeBanner) {
+      noticeBanner.classList.add('hidden');
+    }
+  }
+}
+
+// Auto-deteksi jika nama dompet yang diketik merupakan E-Wallet (DANA, OVO, GoPay, ShopeePay, dsb)
+function handleWalletNameInput(input) {
+  if (!input) return;
+  const val = input.value.trim().toLowerCase();
+  const ewalletKeywords = ['dana', 'ovo', 'gopay', 'go-pay', 'shopeepay', 'shopee pay', 'linkaja', 'link aja', 'kas tunai', 'cash', 'dompet fisik', 'sakusaku'];
+  const isMatch = ewalletKeywords.some(kw => val.includes(kw));
+  
+  const cb = document.getElementById('wallet-no-admin');
+  if (cb && isMatch && !cb.checked) {
+    cb.checked = true;
+    handleWalletNoAdminChange(true);
+  }
+}
+
 function handleSaveWallet(e) {
   e.preventDefault();
 
@@ -1241,8 +1405,9 @@ function handleSaveWallet(e) {
   const name = document.getElementById('wallet-name').value.trim();
   const balStr = document.getElementById('wallet-balance').value.replace(/\D/g, '');
   const balance = parseFloat(balStr) || 0;
+  const isNoAdmin = document.getElementById('wallet-no-admin')?.checked === true;
   const feeStr = document.getElementById('wallet-admin-fee')?.value.replace(/\D/g, '') || '';
-  const adminFee = parseFloat(feeStr) || 0;
+  const adminFee = isNoAdmin ? 0 : (parseFloat(feeStr) || 0);
   const adminDay = document.getElementById('wallet-admin-day')?.value || '25';
   const color = document.querySelector('input[name="wallet_color"]:checked')?.value || '#3b82f6';
 
@@ -1260,12 +1425,16 @@ function handleSaveWallet(e) {
       wallet.balance = balance;
       wallet.adminFee = adminFee;
       wallet.adminDay = adminDay;
+      wallet.isEwallet = isNoAdmin;
       wallet.color = color;
       if (!wallet.lastAdminDeductionMonth) {
         wallet.lastAdminDeductionMonth = currentYearMonth;
       }
     }
-    showLiveToast('💼 Dompet Diperbarui', `Dompet "${name}" berhasil disimpan.${adminFee > 0 ? ` (Auto-potong admin ${formatRupiah(adminFee)}/bln tiap ${adminDayText})` : ''}`);
+    const adminMsg = isNoAdmin
+      ? ' (✨ Bebas biaya admin bulanan)'
+      : (adminFee > 0 ? ` (Auto-potong admin ${formatRupiah(adminFee)}/bln tiap ${adminDayText})` : '');
+    showLiveToast('💼 Dompet Diperbarui', `Dompet "${name}" berhasil disimpan.${adminMsg}`);
   } else {
     // Create new wallet
     const newWallet = {
@@ -1274,12 +1443,16 @@ function handleSaveWallet(e) {
       balance,
       adminFee,
       adminDay,
+      isEwallet: isNoAdmin,
       lastAdminDeductionMonth: currentYearMonth,
       color
     };
     currentSpace.wallets.push(newWallet);
     notifyOtherTabs('NEW_WALLET', newWallet);
-    showLiveToast('💼 Dompet Ditambahkan', `Dompet "${name}" berhasil dibuat.${adminFee > 0 ? ` (Auto-potong admin ${formatRupiah(adminFee)}/bln tiap ${adminDayText})` : ''}`);
+    const adminMsg = isNoAdmin
+      ? ' (✨ Bebas biaya admin bulanan)'
+      : (adminFee > 0 ? ` (Auto-potong admin ${formatRupiah(adminFee)}/bln tiap ${adminDayText})` : '');
+    showLiveToast('💼 Dompet Ditambahkan', `Dompet "${name}" berhasil dibuat.${adminMsg}`);
   }
 
   saveSpaces();
@@ -1302,6 +1475,11 @@ function openAddWalletModal() {
   if (editIdInput) editIdInput.value = '';
   const daySelect = document.getElementById('wallet-admin-day');
   if (daySelect) daySelect.value = '25';
+  
+  const noAdminCb = document.getElementById('wallet-no-admin');
+  if (noAdminCb) noAdminCb.checked = false;
+  handleWalletNoAdminChange(false);
+
   const title = document.getElementById('modal-wallet-title');
   if (title) title.textContent = 'Tambah Kantong / Dompet';
   const submitBtn = document.getElementById('btn-save-wallet-submit');
@@ -1323,9 +1501,17 @@ function openEditWalletModal(walletId) {
   if (title) title.textContent = 'Ubah Kantong / Dompet';
   document.getElementById('wallet-name').value = wallet.name;
   document.getElementById('wallet-balance').value = new Intl.NumberFormat('id-ID').format(wallet.balance);
-  document.getElementById('wallet-admin-fee').value = (wallet.adminFee && wallet.adminFee > 0)
-    ? new Intl.NumberFormat('id-ID').format(wallet.adminFee)
-    : '';
+
+  const isNoAdmin = wallet.isEwallet === true || (!wallet.adminFee && /dana|ovo|gopay|shopee|linkaja|kas|tunai/i.test(wallet.name));
+  const noAdminCb = document.getElementById('wallet-no-admin');
+  if (noAdminCb) noAdminCb.checked = isNoAdmin;
+  handleWalletNoAdminChange(isNoAdmin);
+
+  if (!isNoAdmin) {
+    document.getElementById('wallet-admin-fee').value = (wallet.adminFee && wallet.adminFee > 0)
+      ? new Intl.NumberFormat('id-ID').format(wallet.adminFee)
+      : '';
+  }
 
   const daySelect = document.getElementById('wallet-admin-day');
   if (daySelect) daySelect.value = wallet.adminDay || '25';
@@ -1641,18 +1827,22 @@ function openGoogleSheetsModal() {
   const activeUser = getActiveUser();
   renderActiveUserProfile();
 
-  const sheetInput = document.getElementById('cfg-sheet-url');
-  if (sheetInput) {
-    sheetInput.value = activeUser.googleSheetUrl || localStorage.getItem('sakukita_sheet_url_' + activeUser.id) || '';
-  }
-  const webhookInput = document.getElementById('cfg-webhook-url');
-  if (webhookInput) {
-    webhookInput.value = activeUser.webhookUrl || localStorage.getItem('sakukita_webhook_url_' + activeUser.id) || localStorage.getItem('sakukita_global_webhook_url') || '';
-  }
-  const toggleInput = document.getElementById('cfg-autosync-toggle');
-  if (toggleInput) {
-    toggleInput.checked = activeUser.autoSyncEnabled !== false;
-  }
+  const sheetUrl = activeUser.googleSheetUrl || localStorage.getItem('sakukita_sheet_url_' + activeUser.id) || '';
+  const webhookUrl = activeUser.webhookUrl || localStorage.getItem('sakukita_webhook_url_' + activeUser.id) || localStorage.getItem('sakukita_global_webhook_url') || '';
+  const autoSync = activeUser.autoSyncEnabled !== false;
+
+  ['cfg-sheet-url', 'cfg-sheet-url-sync'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = sheetUrl;
+  });
+  ['cfg-webhook-url', 'cfg-webhook-url-sync'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = webhookUrl;
+  });
+  ['cfg-autosync-toggle', 'cfg-autosync-toggle-sync'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.checked = autoSync;
+  });
 
   updateGoogleSheetsSyncIndicators();
   renderSheetsTablePreview();
@@ -1660,16 +1850,60 @@ function openGoogleSheetsModal() {
   if (modal) modal.classList.remove('hidden');
 }
 
+function openSyncOnlyModal() {
+  const activeUser = getActiveUser();
+  renderActiveUserProfile();
+
+  const sheetUrl = activeUser.googleSheetUrl || localStorage.getItem('sakukita_sheet_url_' + activeUser.id) || '';
+  const webhookUrl = activeUser.webhookUrl || localStorage.getItem('sakukita_webhook_url_' + activeUser.id) || localStorage.getItem('sakukita_global_webhook_url') || '';
+  const autoSync = activeUser.autoSyncEnabled !== false;
+
+  ['cfg-sheet-url', 'cfg-sheet-url-sync'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = sheetUrl;
+  });
+  ['cfg-webhook-url', 'cfg-webhook-url-sync'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = webhookUrl;
+  });
+  ['cfg-autosync-toggle', 'cfg-autosync-toggle-sync'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.checked = autoSync;
+  });
+
+  updateGoogleSheetsSyncIndicators();
+  const modal = document.getElementById('modal-sync');
+  if (modal) modal.classList.remove('hidden');
+}
+
 function handleSaveSheetsConfig(e) {
   e.preventDefault();
   const activeUser = getActiveUser();
-  const sheetUrl = document.getElementById('cfg-sheet-url') ? document.getElementById('cfg-sheet-url').value.trim() : '';
-  const webhookUrl = document.getElementById('cfg-webhook-url') ? document.getElementById('cfg-webhook-url').value.trim() : '';
-  const autoSync = document.getElementById('cfg-autosync-toggle') ? document.getElementById('cfg-autosync-toggle').checked : true;
+  const isSyncOnly = e.target.id === 'form-sync-only-config';
+  const sheetInput = isSyncOnly ? document.getElementById('cfg-sheet-url-sync') : document.getElementById('cfg-sheet-url');
+  const webhookInput = isSyncOnly ? document.getElementById('cfg-webhook-url-sync') : document.getElementById('cfg-webhook-url');
+  const toggleInput = isSyncOnly ? document.getElementById('cfg-autosync-toggle-sync') : document.getElementById('cfg-autosync-toggle');
+
+  const sheetUrl = sheetInput ? sheetInput.value.trim() : '';
+  const webhookUrl = webhookInput ? webhookInput.value.trim() : '';
+  const autoSync = toggleInput ? toggleInput.checked : true;
 
   activeUser.googleSheetUrl = sheetUrl;
   activeUser.webhookUrl = webhookUrl;
   activeUser.autoSyncEnabled = autoSync;
+
+  ['cfg-sheet-url', 'cfg-sheet-url-sync'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = sheetUrl;
+  });
+  ['cfg-webhook-url', 'cfg-webhook-url-sync'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = webhookUrl;
+  });
+  ['cfg-autosync-toggle', 'cfg-autosync-toggle-sync'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.checked = autoSync;
+  });
 
   // Guaranteed Permanent Webhook Persistence (Survives any refresh or data switch)
   if (webhookUrl) {
@@ -1687,6 +1921,7 @@ function handleSaveSheetsConfig(e) {
   renderActiveUserProfile();
   updateGoogleSheetsSyncIndicators();
   closeModal('modal-sheets');
+  closeModal('modal-sync');
   showLiveToast('⚡ Webhook Tersimpan!', `Koneksi Google Spreadsheet untuk ${activeUser.name} berhasil tersambung.`);
 }
 
@@ -2336,13 +2571,6 @@ function formatBankDate(date) {
   return `${d}/${m}/${y} ${hr}:${mn}`;
 }
 
-function copyAppsScriptCode() {
-  const code = document.getElementById('apps-script-code').innerText;
-  navigator.clipboard.writeText(code).then(() => {
-    alert('✅ Script Google Apps Script berhasil disalin!\nTempel di menu Ekstensi > Apps Script pada Google Sheets Anda.');
-  });
-}
-
 // Backend Limit & Cloud Free Tier Monitor
 function updateBackendQuotaDisplay() {
   let totalTransactions = 0;
@@ -2514,6 +2742,23 @@ function openCollabModal() {
             🔄 Sinkronkan Sekarang
           </button>
         </div>
+
+        <!-- Fitur Ganti Nama Panggilan Pemilik & Nama Buku Kas (Khusus Pemantau) -->
+        <div class="rename-alias-box" style="margin-top: 14px; padding: 12px; background: rgba(59, 130, 246, 0.08); border: 1px solid rgba(59, 130, 246, 0.25); border-radius: 12px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+            <span style="font-size:0.8rem; font-weight:700; color:#93c5fd;">✏️ Nama Panggilan di HP Anda:</span>
+            <button type="button" class="btn-preset-pill" onclick="openRenameMonitoredModal('${currentSpace.id}')" style="padding:4px 10px; font-size:0.72rem; background:#3b82f6; color:#fff; border:none; cursor:pointer;">
+              Ubah Nama
+            </button>
+          </div>
+          <div style="font-size:0.78rem; color:var(--text-secondary); line-height:1.45;">
+            <div>• Nama Buku Kas: <b>${escapeHtml(currentSpace.name)}</b></div>
+            <div>• Panggilan Pemilik: <b>${escapeHtml(ownerUser.name)}</b></div>
+            <span style="font-size:0.7rem; color:var(--text-muted); display:block; margin-top:4px;">
+              (Bisa diubah bebas, misal: "Buku Kas Kakak", "Buku Kas Istri", atau "Adik" agar mudah dikenali di daftar pilihan buku kas).
+            </span>
+          </div>
+        </div>
       </div>
     `;
   }
@@ -2535,6 +2780,24 @@ async function handleAddCollabMember(e) {
 
   const currentSpace = getActiveSpace();
   if (!currentSpace.allowedViewers) currentSpace.allowedViewers = [];
+  const currentUser = getActiveUser();
+
+  // Pastikan pemilik buku kas memiliki email/identitas agar undangan jelas bagi pasangan
+  if (!currentUser.email || currentUser.email === '') {
+    const ownerEmail = prompt('Masukkan Email Google Anda (Pemilik Buku Kas) agar pasangan dapat mengenali pengirim undangan:', '');
+    if (ownerEmail && ownerEmail.includes('@')) {
+      currentUser.email = ownerEmail.trim().toLowerCase();
+      if (currentUser.name === 'Pengguna SakuKita') {
+        currentUser.name = 'Pemilik Buku Kas';
+      }
+      saveUsers();
+      renderActiveUserProfile();
+    }
+  }
+
+  if (!currentSpace.cloudTopic) {
+    currentSpace.cloudTopic = getSyncTopicForSpace(currentSpace.id, currentUser.email);
+  }
 
   let memberUser = Object.values(users).find(u => u.email && u.email.toLowerCase() === email);
   if (!memberUser) {
@@ -3120,14 +3383,6 @@ function openTransactionModal() {
   document.getElementById('modal-transaction').classList.remove('hidden');
 }
 
-function openAddWalletModal() {
-  if (!isOwnerOfCurrentSpace()) {
-    alert('Akses Ditolak: Hanya pemilik buku kas yang dapat menambah dompet.');
-    return;
-  }
-  document.getElementById('modal-wallet').classList.remove('hidden');
-}
-
 function openModal(modalId) {
   const el = document.getElementById(modalId);
   if (el) el.classList.remove('hidden');
@@ -3189,7 +3444,7 @@ function copySqlCode() {
 }
 
 function copyAppsScriptCode() {
-  const codeEl = document.getElementById('apps-script-code');
+  const codeEl = document.getElementById('apps-script-code-sync') || document.getElementById('apps-script-code');
   if (!codeEl) return;
   const code = codeEl.innerText || codeEl.textContent;
 
@@ -3226,28 +3481,50 @@ function getSyncTopicForEmail(email) {
   return 'sakukita_u_' + getSyncHash(email);
 }
 
-function getSyncTopicForSpace(spaceId) {
+function getSyncTopicForSpace(spaceId, ownerEmail) {
   if (!spaceId) return null;
-  return 'sakukita_sp_' + spaceId.replace(/[^a-zA-Z0-9_-]/g, '_');
+  const seed = (ownerEmail || spaceId || 'space').trim().toLowerCase();
+  return 'sakukita_sp_' + spaceId.replace(/[^a-zA-Z0-9_-]/g, '_') + '_' + getSyncHash(seed);
+}
+
+// Helper to parse ntfy message or fetch attachment if payload > 4KB
+async function parseNtfyItem(item) {
+  if (!item) return null;
+  if (item.attachment && item.attachment.url) {
+    try {
+      const attRes = await fetch(item.attachment.url);
+      if (attRes.ok) {
+        const attText = await attRes.text();
+        return JSON.parse(attText);
+      }
+    } catch (e) {}
+  }
+  if (item.message && typeof item.message === 'string' && item.message.trim().startsWith('{')) {
+    try {
+      return JSON.parse(item.message);
+    } catch (e) {}
+  }
+  return null;
 }
 
 async function broadcastSpaceToCloud(space) {
   if (!space || !space.id) return;
   if (!space.allowedViewers || space.allowedViewers.length === 0) return;
-  const topic = getSyncTopicForSpace(space.id);
   const ownerUser = users[space.ownerId] || { name: 'Pemilik', email: '' };
+  const topic = space.cloudTopic || getSyncTopicForSpace(space.originalSpaceId || space.id, ownerUser.email);
+  if (!space.cloudTopic) space.cloudTopic = topic;
 
   const payload = {
     action: 'SPACE_UPDATE',
     timestamp: Date.now(),
     space: {
-      id: space.id,
+      id: space.originalSpaceId || space.id,
       name: space.name,
       ownerId: space.ownerId,
       ownerEmail: ownerUser.email,
       ownerName: ownerUser.name,
       icon: space.icon,
-      isDefault: space.isDefault,
+      cloudTopic: topic,
       budget: space.budget || 0,
       allowedViewers: space.allowedViewers,
       wallets: space.wallets,
@@ -3268,20 +3545,24 @@ async function publishCloudInvitation(space, targetEmail, targetName) {
   if (!space || !targetEmail) return;
   const topic = getSyncTopicForEmail(targetEmail);
   const ownerUser = users[space.ownerId] || { name: 'Pemilik', email: '' };
+  const cloudTopic = space.cloudTopic || getSyncTopicForSpace(space.originalSpaceId || space.id, ownerUser.email);
+  if (!space.cloudTopic) space.cloudTopic = cloudTopic;
 
   const payload = {
     action: 'SPACE_INVITE',
     timestamp: Date.now(),
-    targetEmail: targetEmail.toLowerCase(),
+    targetEmail: targetEmail.toLowerCase().trim(),
     targetName: targetName,
     space: {
-      id: space.id,
+      id: space.originalSpaceId || space.id,
       name: space.name,
       ownerId: space.ownerId,
       ownerEmail: ownerUser.email,
       ownerName: ownerUser.name,
       icon: space.icon,
+      cloudTopic: cloudTopic,
       allowedViewers: space.allowedViewers,
+      budget: space.budget || 0,
       wallets: space.wallets,
       transactions: space.transactions
     }
@@ -3299,18 +3580,23 @@ async function publishCloudInvitation(space, targetEmail, targetName) {
 function generateCollabInviteUrl(memberEmail, memberName) {
   const currentSpace = getActiveSpace();
   const ownerUser = users[currentSpace.ownerId] || { name: 'Pasangan', email: '' };
+  const cloudTopic = currentSpace.cloudTopic || getSyncTopicForSpace(currentSpace.originalSpaceId || currentSpace.id, ownerUser.email);
+  if (!currentSpace.cloudTopic) currentSpace.cloudTopic = cloudTopic;
+
   const inviteData = {
-    spaceId: currentSpace.id,
+    spaceId: currentSpace.originalSpaceId || currentSpace.id,
     spaceName: currentSpace.name,
     spaceIcon: currentSpace.icon || '📘',
     ownerId: currentSpace.ownerId,
     ownerName: ownerUser.name,
     ownerEmail: ownerUser.email,
-    targetEmail: memberEmail ? memberEmail.toLowerCase() : '',
+    cloudTopic: cloudTopic,
+    targetEmail: memberEmail ? memberEmail.toLowerCase().trim() : '',
     targetName: memberName || '',
     allowedViewers: currentSpace.allowedViewers || [],
+    budget: currentSpace.budget || 0,
     wallets: currentSpace.wallets || [],
-    transactions: currentSpace.transactions || []
+    transactions: (currentSpace.transactions || []).slice(0, 15)
   };
 
   let jsonStr = JSON.stringify(inviteData);
@@ -3365,7 +3651,7 @@ function processUrlJoinSpaceParam() {
     }
     const data = JSON.parse(jsonStr);
 
-    if (data && data.spaceId) {
+    if (data && (data.spaceId || data.space || data.id)) {
       applyRemoteSpaceJoin(data, 'tautan WhatsApp');
       const cleanUrl = window.location.origin + window.location.pathname;
       window.history.replaceState({}, document.title, cleanUrl);
@@ -3377,63 +3663,66 @@ function processUrlJoinSpaceParam() {
 
 function applyRemoteSpaceJoin(data, sourceLabel) {
   const spaceObj = data.space || data;
-  const incomingSpaceId = data.spaceId || spaceObj.id;
-  if (!incomingSpaceId) return;
+  const rawSpaceId = data.spaceId || spaceObj.id;
+  if (!rawSpaceId) return;
 
-  const ownerId = spaceObj.ownerId || 'owner_remote';
   const ownerName = spaceObj.ownerName || 'Pasangan';
   const ownerEmail = spaceObj.ownerEmail || '';
+  const incomingOwnerId = spaceObj.ownerId || 'owner_remote';
 
-  if (!users[ownerId]) {
-    users[ownerId] = {
-      id: ownerId,
-      name: ownerName,
-      email: ownerEmail,
-      avatar: '👤',
-      photo: '',
-      color: '#3b82f6',
-      googleSheetUrl: '',
-      webhookUrl: '',
-      autoSyncEnabled: true
-    };
-  } else {
-    if (ownerName && ownerName !== 'Pemilik') users[ownerId].name = ownerName;
-    if (ownerEmail) users[ownerId].email = ownerEmail;
-  }
+  // 1. Generate unique partner owner ID in local users (distinct from local activeUserId!)
+  const partnerOwnerId = 'partner_' + getSyncHash(ownerEmail || incomingOwnerId || ownerName);
+  users[partnerOwnerId] = {
+    id: partnerOwnerId,
+    name: ownerName,
+    email: ownerEmail,
+    avatar: '👤',
+    photo: '',
+    color: '#3b82f6',
+    googleSheetUrl: '',
+    webhookUrl: '',
+    autoSyncEnabled: true,
+    isRemoteOwner: true
+  };
 
+  // 2. Generate unique remote space ID (never overwrite User B's own primary space!)
+  const remoteSpaceId = 'shared_' + getSyncHash(ownerEmail || incomingOwnerId || rawSpaceId) + '_' + rawSpaceId;
+  const cloudTopic = spaceObj.cloudTopic || getSyncTopicForSpace(rawSpaceId, ownerEmail);
+
+  // 3. Make sure current active user is registered as allowed viewer
   let viewers = Array.isArray(spaceObj.allowedViewers) ? [...spaceObj.allowedViewers] : [];
   if (!viewers.includes(activeUserId)) {
     viewers.push(activeUserId);
   }
 
-  if (spaces[incomingSpaceId]) {
-    spaces[incomingSpaceId].name = spaceObj.spaceName || spaceObj.name || spaces[incomingSpaceId].name;
-    spaces[incomingSpaceId].icon = spaceObj.spaceIcon || spaceObj.icon || spaces[incomingSpaceId].icon;
-    spaces[incomingSpaceId].ownerId = ownerId;
-    spaces[incomingSpaceId].allowedViewers = viewers;
-    if (spaceObj.wallets && spaceObj.wallets.length > 0) {
-      spaces[incomingSpaceId].wallets = spaceObj.wallets;
+  // 4. Update or insert into spaces
+  spaces[remoteSpaceId] = {
+    id: remoteSpaceId,
+    originalSpaceId: rawSpaceId,
+    cloudTopic: cloudTopic,
+    name: spaceObj.spaceName || spaceObj.name || `Buku Kas (${ownerName})`,
+    icon: spaceObj.spaceIcon || spaceObj.icon || '📘',
+    ownerId: partnerOwnerId, // IMPORTANT: partner is owner, so activeUserId is VIEWER!
+    allowedViewers: viewers,
+    isRemoteShared: true,
+    budget: spaceObj.budget || 0,
+    wallets: (spaceObj.wallets && spaceObj.wallets.length > 0) ? spaceObj.wallets : [
+      { id: 'w-remote-1', name: 'Dompet Utama', balance: 0, color: '#3b82f6' }
+    ],
+    transactions: spaceObj.transactions || []
+  };
+
+  // 5. If User B's profile doesn't have an email yet and invite had targetEmail, adopt it
+  if (data.targetEmail && (!users[activeUserId].email || users[activeUserId].email === '')) {
+    users[activeUserId].email = data.targetEmail;
+    if (data.targetName && users[activeUserId].name === 'Pengguna SakuKita') {
+      users[activeUserId].name = data.targetName;
     }
-    if (spaceObj.transactions) {
-      spaces[incomingSpaceId].transactions = spaceObj.transactions;
-    }
-  } else {
-    spaces[incomingSpaceId] = {
-      id: incomingSpaceId,
-      name: spaceObj.spaceName || spaceObj.name || 'Buku Kas Pasangan',
-      icon: spaceObj.spaceIcon || spaceObj.icon || '📘',
-      ownerId: ownerId,
-      allowedViewers: viewers,
-      budget: spaceObj.budget || 0,
-      wallets: spaceObj.wallets && spaceObj.wallets.length > 0 ? spaceObj.wallets : [
-        { id: 'w-remote-1', name: 'Dompet Utama', balance: 0, color: '#3b82f6' }
-      ],
-      transactions: spaceObj.transactions || []
-    };
   }
 
-  activeSpaceId = incomingSpaceId;
-  localStorage.setItem('sakukita_active_space_id', incomingSpaceId);
+  // 6. Switch to the newly connected space
+  activeSpaceId = remoteSpaceId;
+  localStorage.setItem('sakukita_active_space_id', remoteSpaceId);
   saveUsers();
   saveSpaces();
 
@@ -3444,9 +3733,12 @@ function applyRemoteSpaceJoin(data, sourceLabel) {
   populateCategoryPicker();
   renderAll();
 
+  // Immediately poll full cloud updates for this space
+  pollSpaceFromCloud(remoteSpaceId, false);
+
   showLiveToast(
     '🎉 Buku Kas Terhubung!',
-    `Berhasil terhubung ke Buku Kas "${spaces[incomingSpaceId].name}" milik ${ownerName} (${sourceLabel || 'Cloud'}).`
+    `Berhasil terhubung ke Buku Kas "${spaces[remoteSpaceId].name}" milik ${ownerName} (${sourceLabel || 'Cloud'}). Anda berstatus Pemantau (Read-Only).`
   );
 }
 
@@ -3468,9 +3760,9 @@ async function checkPendingCloudInvites() {
       if (!line.trim()) continue;
       try {
         const item = JSON.parse(line);
-        if (item.event === 'message' && item.message) {
-          const payload = JSON.parse(item.message);
-          if (payload.action === 'SPACE_INVITE' && payload.space) {
+        if (item.event === 'message') {
+          const payload = await parseNtfyItem(item);
+          if (payload && payload.action === 'SPACE_INVITE' && payload.space) {
             applyRemoteSpaceJoin(payload.space, 'Undangan Cloud Otomatis');
           }
         }
@@ -3485,7 +3777,7 @@ async function pollSpaceFromCloud(spaceId, force = false) {
   if (!currentSpace) return;
   if (currentSpace.ownerId === activeUserId) return;
 
-  const topic = getSyncTopicForSpace(spaceId);
+  const topic = currentSpace.cloudTopic || getSyncTopicForSpace(currentSpace.originalSpaceId || spaceId);
   if (!topic) return;
 
   try {
@@ -3498,9 +3790,9 @@ async function pollSpaceFromCloud(spaceId, force = false) {
       if (!line.trim()) continue;
       try {
         const item = JSON.parse(line);
-        if (item.event === 'message' && item.message) {
-          const payload = JSON.parse(item.message);
-          if (payload.action === 'SPACE_UPDATE' && payload.space) {
+        if (item.event === 'message') {
+          const payload = await parseNtfyItem(item);
+          if (payload && payload.action === 'SPACE_UPDATE' && payload.space) {
             if (!latestUpdate || payload.timestamp > latestUpdate.timestamp) {
               latestUpdate = payload;
             }
@@ -3522,6 +3814,10 @@ async function pollSpaceFromCloud(spaceId, force = false) {
       }
       if (sp.name && sp.name !== currentSpace.name) {
         currentSpace.name = sp.name;
+        changed = true;
+      }
+      if (typeof sp.budget !== 'undefined' && sp.budget !== currentSpace.budget) {
+        currentSpace.budget = sp.budget;
         changed = true;
       }
       if (changed) {
@@ -3546,21 +3842,17 @@ async function pollSpaceFromCloud(spaceId, force = false) {
 function setupCloudSyncLoop() {
   if (cloudSyncTimer) clearInterval(cloudSyncTimer);
 
-  setTimeout(() => {
+  const doSync = () => {
     checkPendingCloudInvites();
-    const currentSpace = getActiveSpace();
-    if (currentSpace && currentSpace.ownerId !== activeUserId) {
-      pollSpaceFromCloud(currentSpace.id);
-    }
-  }, 2000);
+    Object.values(spaces).forEach(sp => {
+      if (sp.ownerId !== activeUserId && (sp.isRemoteShared || sp.cloudTopic)) {
+        pollSpaceFromCloud(sp.id, false);
+      }
+    });
+  };
 
-  cloudSyncTimer = setInterval(() => {
-    checkPendingCloudInvites();
-    const currentSpace = getActiveSpace();
-    if (currentSpace && currentSpace.ownerId !== activeUserId) {
-      pollSpaceFromCloud(currentSpace.id);
-    }
-  }, 25000);
+  setTimeout(doSync, 2000);
+  cloudSyncTimer = setInterval(doSync, 20000);
 }
 
 function manualSyncPartnerSpace(spaceId) {
@@ -3568,11 +3860,243 @@ function manualSyncPartnerSpace(spaceId) {
 }
 
 function manualCheckInvitesNow() {
-  showLiveToast('🔍 Memeriksa Cloud...', 'Sedang mencari undangan buku kas yang ditujukan ke email Anda.');
-  checkPendingCloudInvites().then(() => {
-    setTimeout(() => {
-      showLiveToast('✅ Pemeriksaan Selesai', 'Jika ada undangan baru, buku kas akan otomatis muncul di menu atas.');
-    }, 1200);
-  });
+  openFindInviteModal();
 }
+
+function openFindInviteModal() {
+  const currentUser = getActiveUser();
+  const emailInput = document.getElementById('find-invite-email');
+  const resultBox = document.getElementById('find-invite-result-box');
+  const btnText = document.getElementById('btn-submit-find-text');
+  if (btnText) btnText.textContent = '🔍 Cari Undangan di Cloud Sekarang';
+  if (resultBox) {
+    resultBox.classList.add('hidden');
+    resultBox.innerHTML = '';
+  }
+
+  if (emailInput) {
+    emailInput.value = currentUser?.email || '';
+  }
+
+  openModal('modal-find-invite');
+
+  // Jika user sudah pernah memasukkan email, langsung cari ke cloud otomatis
+  if (currentUser?.email && currentUser.email.includes('@')) {
+    executeFindInvitesForEmail(currentUser.email);
+  }
+}
+
+async function handleExecuteFindInvite(e) {
+  if (e) e.preventDefault();
+  const emailInput = document.getElementById('find-invite-email');
+  const email = emailInput?.value.trim().toLowerCase();
+  if (!email || !email.includes('@')) {
+    alert('Silakan masukkan alamat email yang valid.');
+    return;
+  }
+
+  // Update currentUser email agar ke depannya tersimpan dan auto-check berjalan
+  const currentUser = getActiveUser();
+  if (currentUser && (!currentUser.email || currentUser.email !== email)) {
+    currentUser.email = email;
+    saveUsers();
+    renderActiveUserProfile();
+  }
+
+  await executeFindInvitesForEmail(email);
+}
+
+async function executeFindInvitesForEmail(email) {
+  const btnText = document.getElementById('btn-submit-find-text');
+  const resultBox = document.getElementById('find-invite-result-box');
+  if (btnText) btnText.textContent = '⏳ Menghubungi Cloud...';
+
+  if (resultBox) {
+    resultBox.classList.remove('hidden');
+    resultBox.innerHTML = `
+      <div style="padding:10px; border-radius:8px; background:rgba(59,130,246,0.1); border:1px solid rgba(59,130,246,0.3); font-size:0.78rem; color:#93c5fd; text-align:center;">
+        🔄 Sedang mencari undangan cloud untuk <b>${escapeHtml(email)}</b>...
+      </div>
+    `;
+  }
+
+  const topic = getSyncTopicForEmail(email);
+  let foundInvites = [];
+
+  try {
+    const res = await fetch(`https://ntfy.sh/${topic}/json?poll=1&since=all`);
+    if (res.ok) {
+      const text = await res.text();
+      const lines = text.split('\n');
+      for (const line of lines) {
+        if (!line.trim()) continue;
+        try {
+          const item = JSON.parse(line);
+          if (item.event === 'message') {
+            const payload = await parseNtfyItem(item);
+            if (payload && payload.action === 'SPACE_INVITE' && payload.space) {
+              foundInvites.push(payload);
+            }
+          }
+        } catch (e) {}
+      }
+    }
+  } catch (err) {
+    console.error('Cloud query error:', err);
+  }
+
+  if (btnText) btnText.textContent = '🔍 Cari Undangan di Cloud Sekarang';
+
+  if (foundInvites.length > 0) {
+    // Undangan ditemukan
+    const latestInvite = foundInvites[foundInvites.length - 1];
+    applyRemoteSpaceJoin(latestInvite.space, 'Undangan Cloud');
+
+    if (resultBox) {
+      resultBox.innerHTML = `
+        <div style="padding:12px; border-radius:10px; background:rgba(16,185,129,0.15); border:1px solid rgba(16,185,129,0.4); font-size:0.8rem; color:#a7f3d0;">
+          <div style="font-weight:700; margin-bottom:4px;">🎉 Undangan Ditemukan &amp; Berhasil Terhubung!</div>
+          <div>Buku Kas <b>"${escapeHtml(latestInvite.space.name)}"</b> milik <b>${escapeHtml(latestInvite.space.ownerName || 'Pasangan')}</b> telah disambungkan ke HP ini.</div>
+          <button type="button" class="btn-submit-tx" style="margin-top:10px; padding:8px 12px; font-size:0.8rem;" onclick="closeModal('modal-find-invite'); closeModal('modal-collaboration'); renderAll();">
+            👉 Buka Buku Kas Sekarang
+          </button>
+        </div>
+      `;
+    }
+
+    showLiveToast('🎉 Buku Kas Terhubung!', `Berhasil terhubung ke Buku Kas "${latestInvite.space.name}".`);
+    renderAll();
+  } else {
+    // Belum ada undangan di cloud topic
+    if (resultBox) {
+      resultBox.innerHTML = `
+        <div style="padding:12px; border-radius:10px; background:rgba(244,63,94,0.1); border:1px solid rgba(244,63,94,0.25); font-size:0.78rem; color:#fca5a5;">
+          <div style="font-weight:700; margin-bottom:4px;">⚠️ Belum Ada Undangan di Cloud untuk:</div>
+          <div style="font-family:monospace; color:#fff; margin-bottom:8px;">${escapeHtml(email)}</div>
+          <div style="color:var(--text-secondary); line-height:1.4;">
+            <b>Solusi agar langsung terhubung:</b><br>
+            1. Pastikan pasangan sudah membuka menu <b>Keluarga</b> di HP-nya dan menambahkan email di atas.<br>
+            2. Atau minta pasangan klik <b>"Salin Tautan"</b> / <b>"Kirim via WhatsApp"</b> lalu tempel tautannya pada kotak di bawah.
+          </div>
+        </div>
+      `;
+    }
+  }
+}
+
+function handleJoinViaPastedToken() {
+  const input = document.getElementById('paste-invite-token-input');
+  const raw = input?.value.trim() || '';
+  if (!raw) {
+    alert('Silakan tempelkan tautan atau kode undangan yang dikirim pasangan terlebih dahulu.');
+    return;
+  }
+
+  let token = raw;
+  if (token.includes('join_space=')) {
+    try {
+      const urlObj = new URL(token);
+      token = urlObj.searchParams.get('join_space') || '';
+    } catch (e) {
+      const match = token.match(/join_space=([^&]+)/);
+      if (match) token = decodeURIComponent(match[1]);
+    }
+  }
+
+  try {
+    let jsonStr = '';
+    try {
+      jsonStr = decodeURIComponent(Array.prototype.map.call(atob(token), function(c) {
+        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+      }).join(''));
+    } catch (e) {
+      jsonStr = decodeURIComponent(escape(atob(token)));
+    }
+
+    const data = JSON.parse(jsonStr);
+    if (!data.spaceId && !data.id && !data.space) {
+      throw new Error('Format data tidak valid');
+    }
+
+    applyRemoteSpaceJoin(data, 'tautan WhatsApp');
+    closeModal('modal-find-invite');
+    closeModal('modal-collaboration');
+    renderAll();
+
+    showLiveToast(
+      '🎉 Buku Kas Terhubung!',
+      `Berhasil terhubung ke Buku Kas "${data.spaceName || data.name || 'Pasangan'}"!`
+    );
+  } catch (err) {
+    alert('Tautan atau kode undangan tidak valid. Pastikan Anda menyalin seluruh teks tautan dari pasangan.');
+  }
+}
+
+// Viewer Rename & Custom Alias Handlers (Khusus Pemantau)
+function openRenameMonitoredModal(spaceId) {
+  const targetSpaceId = spaceId || activeSpaceId;
+  const currentSpace = spaces[targetSpaceId];
+  if (!currentSpace) return;
+  const ownerUser = users[currentSpace.ownerId] || { name: 'Pemilik' };
+
+  const idInput = document.getElementById('rename-space-id');
+  const ownerInput = document.getElementById('rename-owner-name');
+  const spaceInput = document.getElementById('rename-space-name');
+
+  if (idInput) idInput.value = targetSpaceId;
+  if (ownerInput) ownerInput.value = ownerUser.name || '';
+  if (spaceInput) spaceInput.value = currentSpace.name || '';
+
+  openModal('modal-rename-monitored');
+}
+
+function setRenameOwnerPreset(name) {
+  const ownerInput = document.getElementById('rename-owner-name');
+  const spaceInput = document.getElementById('rename-space-name');
+  if (ownerInput) ownerInput.value = name;
+  if (spaceInput) spaceInput.value = `Buku Kas ${name}`;
+}
+
+function handleSaveRenameMonitored(e) {
+  e.preventDefault();
+  const targetSpaceId = document.getElementById('rename-space-id')?.value || activeSpaceId;
+  const currentSpace = spaces[targetSpaceId];
+  if (!currentSpace) return;
+
+  const newOwnerName = document.getElementById('rename-owner-name')?.value.trim() || 'Pasangan';
+  const newSpaceName = document.getElementById('rename-space-name')?.value.trim() || `Buku Kas (${newOwnerName})`;
+
+  currentSpace.name = newSpaceName;
+  if (users[currentSpace.ownerId]) {
+    users[currentSpace.ownerId].name = newOwnerName;
+  }
+
+  saveSpaces();
+  saveUsers();
+  renderAll();
+  updateSpaceSelectorUI();
+  closeModal('modal-rename-monitored');
+
+  showLiveToast('✏️ Nama Panggilan Disimpan', `Buku kas kini dinamai "${newSpaceName}" (${newOwnerName}).`);
+}
+
+function handleLeaveMonitoredSpace() {
+  const targetSpaceId = document.getElementById('rename-space-id')?.value || activeSpaceId;
+  const currentSpace = spaces[targetSpaceId];
+  if (!currentSpace) return;
+
+  if (confirm(`Apakah Anda yakin ingin berhenti memantau "${currentSpace.name}"?\nBuku kas ini akan dihapus dari daftar buku kas di HP Anda.`)) {
+    delete spaces[targetSpaceId];
+    saveSpaces();
+    activeSpaceId = 'space_1';
+    localStorage.setItem('sakukita_active_space_id', 'space_1');
+    validateActiveSpace();
+    renderAll();
+    updateSpaceSelectorUI();
+    closeModal('modal-rename-monitored');
+    closeModal('modal-collaboration');
+    showLiveToast('🚪 Berhenti Memantau', `Buku kas "${currentSpace.name}" telah dihapus dari HP Anda.`);
+  }
+}
+
 

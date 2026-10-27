@@ -437,6 +437,17 @@
       font-weight: 700;
     }
 
+    .mockup-space-badge-count {
+      background: rgba(59, 130, 246, 0.22);
+      color: #93c5fd;
+      border: 1px solid rgba(59, 130, 246, 0.45);
+      padding: 1px 5px;
+      border-radius: 99px;
+      font-size: 0.5rem;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
     /* Mockup Balance Card */
     .mockup-card-balance {
       background: linear-gradient(135deg, #1e3a8a 0%, #0f172a 100%);
@@ -563,6 +574,68 @@
       color: #cbd5e1;
     }
 
+    /* Mockup Monthly Budget Card */
+    .mockup-budget-box {
+      background: rgba(30, 41, 59, 0.55);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 9px;
+      padding: 6px 8px;
+      text-align: left;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .mockup-budget-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 0.56rem;
+    }
+
+    .mockup-budget-title {
+      color: #cbd5e1;
+      display: flex;
+      align-items: center;
+      gap: 3px;
+    }
+
+    .mockup-budget-title b {
+      color: #f1f5f9;
+      font-weight: 700;
+    }
+
+    .mockup-budget-pct {
+      background: rgba(59, 130, 246, 0.25);
+      color: #93c5fd;
+      border-radius: 4px;
+      padding: 1px 4px;
+      font-weight: 800;
+      font-size: 0.52rem;
+    }
+
+    .mockup-budget-progress-track {
+      width: 100%;
+      height: 4px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 99px;
+      overflow: hidden;
+    }
+
+    .mockup-budget-progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #3b82f6, #10b981);
+      border-radius: 99px;
+    }
+
+    .mockup-budget-footer {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.48rem;
+      color: #94a3b8;
+      font-weight: 600;
+    }
+
     /* Mockup Wallets Slider */
     .mockup-wallets-box {
       background: rgba(255, 255, 255, 0.02);
@@ -601,6 +674,34 @@
       padding: 3px 5px;
       font-size: 0.52rem;
       white-space: nowrap;
+    }
+
+    .mockup-wallet-row-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 2px;
+      margin-bottom: 2px;
+    }
+
+    .mockup-fee-badge {
+      font-size: 0.44rem;
+      padding: 1px 3px;
+      border-radius: 3px;
+      font-weight: 700;
+      letter-spacing: -0.2px;
+    }
+
+    .mockup-fee-badge.fee {
+      background: rgba(239, 68, 68, 0.18);
+      color: #fca5a5;
+      border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+
+    .mockup-fee-badge.free {
+      background: rgba(16, 185, 129, 0.18);
+      color: #6ee7b7;
+      border: 1px solid rgba(16, 185, 129, 0.3);
     }
 
     .mockup-wallet-pill strong {
@@ -1395,11 +1496,12 @@
             </div>
           </div>
 
-          <!-- Space Selector Capsule -->
+          <!-- Space Selector Capsule (Bisa Pantau Banyak Buku Kas Keluarga) -->
           <div class="mockup-space-capsule">
             <div class="mockup-space-left">
               <span>📘</span>
               <span>Buku Kas Utama</span>
+              <span class="mockup-space-badge-count">+3 Keluarga</span>
               <span style="font-size: 0.5rem; color:#94a3b8;">▼</span>
             </div>
             <div class="mockup-space-right">
@@ -1434,7 +1536,7 @@
               <span class="mockup-quick-label">Catat</span>
             </div>
             <div class="mockup-quick-item">
-              <div class="mockup-action-circle green">🤝</div>
+              <div class="mockup-action-circle green">👥</div>
               <span class="mockup-quick-label">Keluarga</span>
             </div>
             <div class="mockup-quick-item">
@@ -1443,14 +1545,29 @@
             </div>
             <div class="mockup-quick-item">
               <div class="mockup-action-circle purple">
-                📊
+                🔄
                 <div class="mockup-action-dot"></div>
               </div>
               <span class="mockup-quick-label">Sinkron</span>
             </div>
           </div>
 
-          <!-- Kantong / Dompet Mini Slider -->
+          <!-- Target Anggaran Bulanan Mini Card -->
+          <div class="mockup-budget-box">
+            <div class="mockup-budget-head">
+              <span class="mockup-budget-title">🎯 Target Anggaran Bulanan: <b>Rp 5.000.000</b></span>
+              <span class="mockup-budget-pct">43%</span>
+            </div>
+            <div class="mockup-budget-progress-track">
+              <div class="mockup-budget-progress-fill" style="width: 43%;"></div>
+            </div>
+            <div class="mockup-budget-footer">
+              <span>Terpakai: Rp 2.150.000</span>
+              <span style="color: #34d399;">Sisa: Rp 2.850.000</span>
+            </div>
+          </div>
+
+          <!-- Kantong / Dompet Mini Slider with Admin Fee Status -->
           <div class="mockup-wallets-box">
             <div class="mockup-section-head">
               <span>💳 Kantong &amp; Dompet</span>
@@ -1458,15 +1575,24 @@
             </div>
             <div class="mockup-wallets-list">
               <div class="mockup-wallet-pill">
-                <span>BCA</span>
+                <div class="mockup-wallet-row-top">
+                  <span>BCA</span>
+                  <span class="mockup-fee-badge fee">Admin 14rb</span>
+                </div>
                 <strong>Rp 10.5jt</strong>
               </div>
               <div class="mockup-wallet-pill">
-                <span>Gopay</span>
+                <div class="mockup-wallet-row-top">
+                  <span>Gopay</span>
+                  <span class="mockup-fee-badge free">✨ Bebas Admin</span>
+                </div>
                 <strong>Rp 1.85jt</strong>
               </div>
               <div class="mockup-wallet-pill">
-                <span>Tabungan</span>
+                <div class="mockup-wallet-row-top">
+                  <span>DANA</span>
+                  <span class="mockup-fee-badge free">✨ Bebas Admin</span>
+                </div>
                 <strong>Rp 2.5jt</strong>
               </div>
             </div>
@@ -1554,15 +1680,15 @@
 
         <!-- Feature 2 -->
         <div class="feature-card" id="izin-pantau">
-          <div class="feature-icon-box purple">🔒</div>
-          <h3>Izin Pantau (Read-Only Guard)</h3>
-          <p>Undang pasangan atau saudara untuk memantau keuangan Anda. Sistem secara otomatis mengunci hak akses sehingga mereka hanya bisa memantau tanpa bisa merubah atau menghapus data Anda.</p>
+          <div class="feature-icon-box purple">🤝</div>
+          <h3>Pantau Banyak Buku Kas &amp; Rename Panggilan</h3>
+          <p>Mendukung lebih dari 2 buku kas: pantau pasangan, kakak, adik, hingga orang tua dalam satu aplikasi! Sebagai pemantau (read-only guard), Anda bebas memberi nama panggilan (rename) di HP sendiri tanpa merubah data pemilik.</p>
         </div>
 
         <!-- Feature 3 -->
         <div class="feature-card">
           <div class="feature-icon-box">📁</div>
-          <h3>Google Drive & Sheets Terisolasi</h3>
+          <h3>Google Drive &amp; Sheets Terisolasi</h3>
           <p>Setiap akun Google memiliki lembar kerja mutasi tersendiri. Ketika data disinkronkan atau diunduh, hanya data pribadi milik akun tersebut yang disertakan—tidak akan pernah tercampur.</p>
         </div>
 
@@ -1575,9 +1701,9 @@
 
         <!-- Feature 5 -->
         <div class="feature-card">
-          <div class="feature-icon-box green">💰</div>
-          <h3>Bebas Biaya Langganan Selamanya</h3>
-          <p>Manfaatkan kuota backend cloud gratis dengan indikator limit realtime. Aman digunakan bersama keluarga hingga >5 orang tanpa tagihan bulanan.</p>
+          <div class="feature-icon-box orange">🎯</div>
+          <h3>Target Anggaran &amp; Bebas Admin E-Wallet</h3>
+          <p>Pasang batas belanja bulanan dengan progress bar visual terkontrol. Kelola biaya admin bulanan rekening bank atau centang <i>Bebas Admin</i> untuk dompet digital seperti DANA, Gopay, dan OVO.</p>
         </div>
 
         <!-- Feature 6 -->
