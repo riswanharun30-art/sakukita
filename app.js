@@ -315,6 +315,7 @@ document.addEventListener('DOMContentLoaded', () => {
   populateCategoryPicker();
   renderAll();
   updateBackendQuotaDisplay();
+  checkAndProcessMonthlyAdminFees();
 
   setupRealtimeListeners();
 
@@ -571,6 +572,7 @@ function handleSpaceChange(newSpaceId) {
   activeSpaceId = newSpaceId;
   currentFilter = 'all';
   renderAll();
+  checkAndProcessMonthlyAdminFees();
 }
 
 // Update Space Selector UI
@@ -683,16 +685,38 @@ function renderOverview(currentSpace) {
 function renderWallets(currentSpace) {
   const container = document.getElementById('wallets-container');
   container.innerHTML = '';
+  const isOwner = isOwnerOfCurrentSpace();
 
   currentSpace.wallets.forEach(wallet => {
     const card = document.createElement('div');
     card.className = 'wallet-card-item';
+    if (isOwner) {
+      card.style.cursor = 'pointer';
+      card.title = 'Klik untuk ubah nama atau atur biaya admin bulanan';
+      card.onclick = () => openEditWalletModal(wallet.id);
+    }
+
+    const adminDayLabel = (wallet.adminDay === 'akhir') ? 'Akhir Bln' : `Tgl ${wallet.adminDay || 25}`;
+    const adminFeeHtml = (wallet.adminFee && wallet.adminFee > 0)
+      ? `<div class="wallet-admin-fee-tag" title="Auto-potong admin bank tiap ${adminDayLabel}">
+           <span>⚡ Admin: ${formatRupiah(wallet.adminFee)}/bln (${adminDayLabel})</span>
+         </div>`
+      : '';
+
     card.innerHTML = `
       <div class="wallet-top">
-        <span class="wallet-name">${escapeHtml(wallet.name)}</span>
-        <span class="wallet-dot" style="background: ${wallet.color}; box-shadow: 0 0 8px ${wallet.color}"></span>
+        <span class="wallet-name" title="${escapeHtml(wallet.name)}">${escapeHtml(wallet.name)}</span>
+        <div class="wallet-top-right">
+          <span class="wallet-dot" style="background: ${wallet.color}; box-shadow: 0 0 8px ${wallet.color}"></span>
+          ${isOwner && currentSpace.wallets.length > 1 ? `
+            <button type="button" class="wallet-card-del-btn" title="Hapus kantong ${escapeHtml(wallet.name)}" onclick="event.stopPropagation(); triggerDeleteWalletPrompt('${wallet.id}')">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
+          ` : ''}
+        </div>
       </div>
       <div class="wallet-balance">${formatRupiah(wallet.balance)}</div>
+      ${adminFeeHtml}
     `;
     container.appendChild(card);
   });
@@ -968,36 +992,326 @@ function deleteTransaction(txId) {
   showLiveToast('🗑️ Transaksi Dihapus', `Data "${tx.note}" telah dihapus.`);
 }
 
-// Wallet Modal
+// Wallet Management & Automatic Monthly Bank Admin Fee Engine
 function handleSaveWallet(e) {
   e.preventDefault();
 
   if (!isOwnerOfCurrentSpace()) {
-    alert('Akses Ditolak: Hanya pemilik buku kas yang dapat menambah dompet.');
+    alert('Akses Ditolak: Hanya pemilik buku kas yang dapat mengelola dompet.');
     return;
   }
 
+  const editId = document.getElementById('edit-wallet-id')?.value || '';
   const name = document.getElementById('wallet-name').value.trim();
   const balStr = document.getElementById('wallet-balance').value.replace(/\D/g, '');
   const balance = parseFloat(balStr) || 0;
+  const feeStr = document.getElementById('wallet-admin-fee')?.value.replace(/\D/g, '') || '';
+  const adminFee = parseFloat(feeStr) || 0;
+  const adminDay = document.getElementById('wallet-admin-day')?.value || '25';
   const color = document.querySelector('input[name="wallet_color"]:checked')?.value || '#3b82f6';
 
   const currentSpace = getActiveSpace();
-  const newWallet = {
-    id: 'w-' + Date.now(),
-    name,
-    balance,
-    color
-  };
+  const now = new Date();
+  const currentYearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 
-  currentSpace.wallets.push(newWallet);
+  const adminDayText = (adminDay === 'akhir') ? 'Akhir Bulan' : `Tgl ${adminDay}`;
+
+  if (editId) {
+    // Update existing wallet
+    const wallet = currentSpace.wallets.find(w => w.id === editId);
+    if (wallet) {
+      wallet.name = name;
+      wallet.balance = balance;
+      wallet.adminFee = adminFee;
+      wallet.adminDay = adminDay;
+      wallet.color = color;
+      if (!wallet.lastAdminDeductionMonth) {
+        wallet.lastAdminDeductionMonth = currentYearMonth;
+      }
+    }
+    showLiveToast('💼 Dompet Diperbarui', `Dompet "${name}" berhasil disimpan.${adminFee > 0 ? ` (Auto-potong admin ${formatRupiah(adminFee)}/bln tiap ${adminDayText})` : ''}`);
+  } else {
+    // Create new wallet
+    const newWallet = {
+      id: 'w-' + Date.now(),
+      name,
+      balance,
+      adminFee,
+      adminDay,
+      lastAdminDeductionMonth: currentYearMonth,
+      color
+    };
+    currentSpace.wallets.push(newWallet);
+    notifyOtherTabs('NEW_WALLET', newWallet);
+    showLiveToast('💼 Dompet Ditambahkan', `Dompet "${name}" berhasil dibuat.${adminFee > 0 ? ` (Auto-potong admin ${formatRupiah(adminFee)}/bln tiap ${adminDayText})` : ''}`);
+  }
+
   saveSpaces();
-  notifyOtherTabs('NEW_WALLET', newWallet);
-
   renderAll();
   closeModal('modal-wallet');
-  document.getElementById('form-wallet').reset();
-  showLiveToast('💼 Dompet Ditambahkan', `Dompet "${name}" berhasil dibuat.`);
+  const form = document.getElementById('form-wallet');
+  if (form) form.reset();
+  const editInput = document.getElementById('edit-wallet-id');
+  if (editInput) editInput.value = '';
+}
+
+function openAddWalletModal() {
+  if (!isOwnerOfCurrentSpace()) {
+    alert('Akses Ditolak: Hanya pemilik buku kas yang dapat menambah dompet.');
+    return;
+  }
+  const form = document.getElementById('form-wallet');
+  if (form) form.reset();
+  const editIdInput = document.getElementById('edit-wallet-id');
+  if (editIdInput) editIdInput.value = '';
+  const daySelect = document.getElementById('wallet-admin-day');
+  if (daySelect) daySelect.value = '25';
+  const title = document.getElementById('modal-wallet-title');
+  if (title) title.textContent = 'Tambah Kantong / Dompet';
+  const submitBtn = document.getElementById('btn-save-wallet-submit');
+  if (submitBtn) submitBtn.textContent = 'Tambah Dompet';
+  const delBtn = document.getElementById('btn-delete-wallet');
+  if (delBtn) delBtn.classList.add('hidden');
+  document.getElementById('modal-wallet').classList.remove('hidden');
+}
+
+function openEditWalletModal(walletId) {
+  if (!isOwnerOfCurrentSpace()) return;
+  const currentSpace = getActiveSpace();
+  const wallet = currentSpace.wallets.find(w => w.id === walletId);
+  if (!wallet) return;
+
+  const editIdInput = document.getElementById('edit-wallet-id');
+  if (editIdInput) editIdInput.value = wallet.id;
+  const title = document.getElementById('modal-wallet-title');
+  if (title) title.textContent = 'Ubah Kantong / Dompet';
+  document.getElementById('wallet-name').value = wallet.name;
+  document.getElementById('wallet-balance').value = new Intl.NumberFormat('id-ID').format(wallet.balance);
+  document.getElementById('wallet-admin-fee').value = (wallet.adminFee && wallet.adminFee > 0)
+    ? new Intl.NumberFormat('id-ID').format(wallet.adminFee)
+    : '';
+
+  const daySelect = document.getElementById('wallet-admin-day');
+  if (daySelect) daySelect.value = wallet.adminDay || '25';
+
+  const radio = document.querySelector(`input[name="wallet_color"][value="${wallet.color}"]`);
+  if (radio) radio.checked = true;
+
+  const submitBtn = document.getElementById('btn-save-wallet-submit');
+  if (submitBtn) submitBtn.textContent = 'Simpan Perubahan';
+
+  const delBtn = document.getElementById('btn-delete-wallet');
+  if (delBtn) {
+    if (currentSpace.wallets.length > 1) {
+      delBtn.classList.remove('hidden');
+    } else {
+      delBtn.classList.add('hidden');
+    }
+  }
+
+  document.getElementById('modal-wallet').classList.remove('hidden');
+}
+
+let pendingDeleteWalletId = null;
+
+function handleDeleteWallet() {
+  const editId = document.getElementById('edit-wallet-id')?.value;
+  if (!editId) return;
+  triggerDeleteWalletPrompt(editId);
+}
+
+function triggerDeleteWalletPrompt(walletId) {
+  if (!isOwnerOfCurrentSpace()) {
+    showLiveToast('Akses Ditolak', 'Hanya pemilik buku kas yang dapat mengelola atau menghapus kantong.');
+    return;
+  }
+
+  const currentSpace = getActiveSpace();
+  if (currentSpace.wallets.length <= 1) {
+    showLiveToast(
+      '⚠️ Kantong Utama Tidak Dapat Dihapus',
+      'Buku kas wajib memiliki minimal 1 kantong. Buat kantong baru terlebih dahulu jika Anda ingin menghapus kantong ini.'
+    );
+    return;
+  }
+
+  const wallet = currentSpace.wallets.find(w => w.id === walletId);
+  if (!wallet) return;
+
+  pendingDeleteWalletId = walletId;
+
+  // Populate UI modal konfirmasi khusus
+  const dot = document.getElementById('del-confirm-dot');
+  if (dot) {
+    dot.style.background = wallet.color;
+    dot.style.boxShadow = `0 0 8px ${wallet.color}`;
+  }
+  const nameEl = document.getElementById('del-confirm-name');
+  if (nameEl) nameEl.textContent = wallet.name;
+  const checkNameEl = document.getElementById('del-confirm-check-wallet-name');
+  if (checkNameEl) checkNameEl.textContent = `"${wallet.name}"`;
+  const balEl = document.getElementById('del-confirm-balance');
+  if (balEl) balEl.textContent = formatRupiah(wallet.balance);
+
+  const txCount = currentSpace.transactions.filter(t => t.walletId === wallet.id).length;
+  const txCountEl = document.getElementById('del-confirm-tx-count');
+  if (txCountEl) txCountEl.textContent = `${txCount} transaksi pernah dicatat pada kantong ini`;
+
+  const transferBox = document.getElementById('del-balance-transfer-box');
+  const targetSelect = document.getElementById('del-transfer-target-wallet');
+  const balanceWarningLi = document.getElementById('del-confirm-balance-warning-li');
+
+  if (Number(wallet.balance) > 0) {
+    if (transferBox) transferBox.classList.remove('hidden');
+    const amountLabel = document.getElementById('del-transfer-amount-label');
+    if (amountLabel) amountLabel.textContent = formatRupiah(wallet.balance);
+    if (balanceWarningLi) {
+      balanceWarningLi.textContent = `Kantong ini masih memiliki sisa saldo ${formatRupiah(wallet.balance)}. Silakan pilih kantong tujuan pemindahan dana di bawah agar uang kas tidak berkurang.`;
+    }
+
+    if (targetSelect) {
+      targetSelect.innerHTML = '';
+      const otherWallets = currentSpace.wallets.filter(w => w.id !== wallet.id);
+      otherWallets.forEach((ow, i) => {
+        const opt = document.createElement('option');
+        opt.value = ow.id;
+        opt.textContent = `${ow.name} (Saldo saat ini: ${formatRupiah(ow.balance)})`;
+        if (i === 0) opt.selected = true;
+        targetSelect.appendChild(opt);
+      });
+    }
+  } else {
+    if (transferBox) transferBox.classList.add('hidden');
+    if (balanceWarningLi) {
+      balanceWarningLi.textContent = 'Kantong ini memiliki saldo Rp 0. Tidak ada pemindahan dana yang diperlukan.';
+    }
+  }
+
+  // Reset checkbox & confirm button
+  const checkbox = document.getElementById('del-confirm-checkbox');
+  if (checkbox) checkbox.checked = false;
+  const btnExecute = document.getElementById('btn-execute-delete-wallet');
+  if (btnExecute) btnExecute.disabled = true;
+
+  document.getElementById('modal-delete-wallet-confirm').classList.remove('hidden');
+}
+
+function handleDeleteWalletCheckboxChange() {
+  const checkbox = document.getElementById('del-confirm-checkbox');
+  const btn = document.getElementById('btn-execute-delete-wallet');
+  if (checkbox && btn) {
+    btn.disabled = !checkbox.checked;
+  }
+}
+
+function executeDeleteWalletConfirmed() {
+  if (!pendingDeleteWalletId) return;
+  const currentSpace = getActiveSpace();
+
+  if (currentSpace.wallets.length <= 1) {
+    showLiveToast('⚠️ Pembatalan', 'Buku kas harus memiliki minimal 1 kantong.');
+    closeModal('modal-delete-wallet-confirm');
+    return;
+  }
+
+  const walletIndex = currentSpace.wallets.findIndex(w => w.id === pendingDeleteWalletId);
+  if (walletIndex === -1) return;
+
+  const wallet = currentSpace.wallets[walletIndex];
+  const walletName = wallet.name;
+  const balance = Number(wallet.balance) || 0;
+  let transferMsg = '';
+
+  // Process balance transfer if balance > 0
+  if (balance > 0) {
+    const targetSelect = document.getElementById('del-transfer-target-wallet');
+    const targetWalletId = targetSelect?.value;
+    const targetWallet = currentSpace.wallets.find(w => w.id === targetWalletId);
+
+    if (targetWallet) {
+      targetWallet.balance += balance;
+      transferMsg = ` Sisa saldo ${formatRupiah(balance)} dialihkan ke ${targetWallet.name}.`;
+    }
+  }
+
+  // Preserve original wallet name snapshot on past transactions for 100% accurate financial history
+  currentSpace.transactions.forEach(t => {
+    if (t.walletId === wallet.id) {
+      if (!t.walletName) t.walletName = walletName;
+    }
+  });
+
+  // Remove wallet from space
+  currentSpace.wallets.splice(walletIndex, 1);
+  saveSpaces();
+
+  // Notify other tabs and devices
+  notifyOtherTabs('WALLET_DELETED', { walletId: pendingDeleteWalletId, walletName: walletName });
+
+  renderAll();
+  closeModal('modal-delete-wallet-confirm');
+  closeModal('modal-wallet');
+
+  showLiveToast('🗑️ Kantong Dihapus', `Kantong "${walletName}" berhasil dihapus.${transferMsg}`);
+  pendingDeleteWalletId = null;
+}
+
+// Automatic Monthly Bank Admin Fee Deduction Engine
+function checkAndProcessMonthlyAdminFees() {
+  const currentSpace = getActiveSpace();
+  if (!currentSpace || !currentSpace.wallets) return;
+  if (!isOwnerOfCurrentSpace()) return;
+
+  const now = new Date();
+  const currentYearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  const todayDate = now.getDate();
+  const lastDayOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+  const monthName = now.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
+  let deductionsMade = 0;
+
+  currentSpace.wallets.forEach(w => {
+    const fee = parseFloat(w.adminFee) || 0;
+    if (fee > 0) {
+      let targetDay = 25;
+      if (w.adminDay === 'akhir') {
+        targetDay = lastDayOfMonth;
+      } else {
+        targetDay = parseInt(w.adminDay) || 25;
+      }
+
+      // Deduct only when:
+      // 1. Not yet deducted for this month (w.lastAdminDeductionMonth !== currentYearMonth)
+      // 2. Today's date has reached or passed the target day (todayDate >= targetDay)
+      if (w.lastAdminDeductionMonth !== currentYearMonth && todayDate >= targetDay) {
+        w.balance -= fee;
+        w.lastAdminDeductionMonth = currentYearMonth;
+
+        const dayLabel = (w.adminDay === 'akhir') ? 'Akhir Bulan' : `Tgl ${targetDay}`;
+        const tx = {
+          id: 'tx-admin-' + Date.now() + '-' + Math.random().toString(36).substr(2, 4),
+          walletId: w.id,
+          amount: fee,
+          type: 'EXPENSE',
+          category: 'Tagihan',
+          icon: '🏦',
+          note: `Biaya Admin Bank Bulanan ${w.name} (${dayLabel} ${monthName})`,
+          createdBy: activeUserId,
+          createdAt: now.toISOString()
+        };
+
+        currentSpace.transactions.unshift(tx);
+        triggerGoogleSheetsAutoSync(tx, 'ADD', currentSpace);
+        deductionsMade++;
+      }
+    }
+  });
+
+  if (deductionsMade > 0) {
+    saveSpaces();
+    renderAll();
+    showLiveToast('🏦 Potongan Admin Bank Bulanan', `${deductionsMade} potongan admin bank otomatis telah dicatat untuk bulan ${monthName}.`);
+    notifyOtherTabs('NEW_TRANSACTION', { note: 'Potongan Admin Bank Otomatis' });
+  }
 }
 
 // Google Sheets Auto-Sync Engine (Strictly Isolated Per Account)
@@ -1042,9 +1356,10 @@ function triggerGoogleSheetsAutoSync(tx, actionType, space) {
           type: tx.type,
           category: tx.category,
           amount: tx.amount,
+          amountFormatted: formatRupiah(tx.amount),
           walletName: wallet.name,
           note: tx.note,
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toLocaleString('id-ID') + ' WIB'
         })
       }).catch(err => console.log('Webhook dispatched'));
     } catch (e) {
@@ -1093,56 +1408,168 @@ function renderSheetsTablePreview() {
   const activeUser = getActiveUser();
   if (!tbody) return;
 
-  const storageKey = 'sakukita_sheet_sync_log_' + activeUser.id;
-  let syncHistory = JSON.parse(localStorage.getItem(storageKey) || '[]');
-
-  // If empty, generate rows ONLY from transactions created by activeUser (Strict isolation!)
-  if (syncHistory.length === 0) {
-    Object.values(spaces).forEach(space => {
-      space.transactions.forEach((t, i) => {
-        if (t.createdBy === activeUser.id) {
-          const wallet = space.wallets.find(w => w.id === t.walletId) || { name: 'Dompet' };
-          syncHistory.push({
-            id: 'row-' + activeUser.id + '-' + i,
-            timestamp: new Date(t.createdAt).toLocaleString('id-ID'),
-            userName: activeUser.name,
-            userEmail: activeUser.email,
-            spaceName: space.name,
-            type: t.type === 'INCOME' ? 'Pemasukan (+)' : 'Pengeluaran (-)',
-            category: t.category,
-            amount: formatRupiah(t.amount),
-            walletName: wallet.name,
-            note: t.note
-          });
-        }
-      });
+  // STRICT GUARANTEE: Filter ONLY transactions belonging to activeUser
+  let userTxList = [];
+  Object.values(spaces).forEach(space => {
+    space.transactions.forEach(t => {
+      if (t.createdBy === activeUser.id) {
+        const wallet = space.wallets.find(w => w.id === t.walletId) || { name: 'Dompet' };
+        userTxList.push({
+          rawDate: new Date(t.createdAt),
+          dateFormatted: formatBankDate(new Date(t.createdAt)),
+          walletName: wallet.name,
+          category: t.category,
+          note: t.note,
+          type: t.type,
+          amount: Number(t.amount)
+        });
+      }
     });
-    localStorage.setItem(storageKey, JSON.stringify(syncHistory));
-  }
+  });
 
-  countTag.textContent = `${syncHistory.length} Baris Pribadi (${activeUser.name})`;
+  userTxList.sort((a, b) => a.rawDate - b.rawDate);
+
+  countTag.textContent = `${userTxList.length} Baris Pribadi (${activeUser.name})`;
   tbody.innerHTML = '';
 
-  if (syncHistory.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; padding: 20px; color: var(--text-muted);">Belum ada catatan transaksi pribadi milik ${escapeHtml(activeUser.name)}.</td></tr>`;
+  if (userTxList.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding: 20px; color: var(--text-muted);">Belum ada catatan mutasi transaksi milik ${escapeHtml(activeUser.name)}.</td></tr>`;
     return;
   }
 
-  syncHistory.slice(0, 15).forEach((row, idx) => {
+  let runningBal = 0;
+  userTxList.slice(0, 20).forEach((t, idx) => {
+    let debetStr = '-';
+    let kreditStr = '-';
+    if (t.type === 'EXPENSE') {
+      debetStr = formatRupiah(t.amount);
+      runningBal -= t.amount;
+    } else {
+      kreditStr = formatRupiah(t.amount);
+      runningBal += t.amount;
+    }
+
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td>${idx + 1}</td>
-      <td>${escapeHtml(row.timestamp)}</td>
-      <td><strong style="color:#60a5fa">${escapeHtml(row.userName)}</strong></td>
-      <td><span style="font-family:var(--font-mono); font-size:0.7rem">${escapeHtml(row.userEmail)}</span></td>
-      <td style="color: ${row.type.includes('+') ? '#10b981' : '#f43f5e'}">${escapeHtml(row.type)}</td>
-      <td>${escapeHtml(row.category)}</td>
-      <td><strong>${escapeHtml(row.amount)}</strong></td>
-      <td>${escapeHtml(row.walletName)}</td>
-      <td>${escapeHtml(row.note)}</td>
+      <td>${escapeHtml(t.dateFormatted)}</td>
+      <td>${escapeHtml(t.note || t.category)}</td>
+      <td>${escapeHtml(t.category)}</td>
+      <td><span class="badge-wallet">${escapeHtml(t.walletName)}</span></td>
+      <td style="color: #f43f5e; text-align: right;">${escapeHtml(debetStr)}</td>
+      <td style="color: #10b981; text-align: right;">${escapeHtml(kreditStr)}</td>
+      <td style="color: #60a5fa; text-align: right; font-weight: bold;">${escapeHtml(formatRupiah(runningBal))}</td>
     `;
     tbody.appendChild(tr);
   });
+}
+
+// 1-Click Copy Tab-Separated Data for Direct Paste into Google Sheets / Excel
+function copyTableForGoogleSheets() {
+  const activeUser = getActiveUser();
+  let userTxList = [];
+  Object.values(spaces).forEach(space => {
+    space.transactions.forEach(t => {
+      if (t.createdBy === activeUser.id) {
+        const wallet = space.wallets.find(w => w.id === t.walletId) || { name: 'Dompet' };
+        userTxList.push({
+          rawDate: new Date(t.createdAt),
+          dateFormatted: formatBankDate(new Date(t.createdAt)),
+          walletName: wallet.name,
+          category: t.category,
+          note: t.note,
+          type: t.type,
+          amount: Number(t.amount)
+        });
+      }
+    });
+  });
+
+  if (userTxList.length === 0) {
+    showLiveToast('ℹ️ Data Masih Kosong', 'Belum ada transaksi pribadi untuk disalin ke Google Sheets.');
+    return;
+  }
+
+  userTxList.sort((a, b) => a.rawDate - b.rawDate);
+
+  let runningBal = 0;
+  let rows = [];
+
+  // Metadata headers
+  rows.push(['SAKUKITA - LAPORAN REKENING MUTASI KEUANGAN PRIBADI'].join('\t'));
+  rows.push([`Nama Pemilik: ${activeUser.name}`, `Email: ${activeUser.email}`, `Waktu Cetak: ${new Date().toLocaleString('id-ID')} WIB`].join('\t'));
+  
+  // Wallet Balances Summary
+  const activeSpace = getActiveSpace();
+  if (activeSpace && activeSpace.wallets && activeSpace.wallets.length > 0) {
+    rows.push(['STATUS SALDO DOMPET SAAT INI:'].join('\t'));
+    activeSpace.wallets.forEach(w => {
+      rows.push(['', w.name, 'Saldo Terakhir:', formatRupiah(w.balance)].join('\t'));
+    });
+    const totalBal = activeSpace.wallets.reduce((s, w) => s + Number(w.balance), 0);
+    rows.push(['', 'TOTAL SALDO KAS TERSEDIA', '', formatRupiah(totalBal)].join('\t'));
+  }
+  rows.push('');
+
+  // Table Column Headers (Tab-separated)
+  rows.push(['No', 'Tanggal Mutasi', 'Keterangan Mutasi', 'Kategori', 'Dompet / Rekening', 'Debet (DB)', 'Kredit (CR)', 'Saldo Berjalan'].join('\t'));
+
+  userTxList.forEach((t, idx) => {
+    let debet = '-';
+    let kredit = '-';
+    if (t.type === 'EXPENSE') {
+      debet = formatRupiah(t.amount);
+      runningBal -= t.amount;
+    } else {
+      kredit = formatRupiah(t.amount);
+      runningBal += t.amount;
+    }
+    rows.push([
+      idx + 1,
+      t.dateFormatted,
+      t.note || t.category,
+      t.category,
+      t.walletName,
+      debet,
+      kredit,
+      formatRupiah(runningBal)
+    ].join('\t'));
+  });
+
+  const tsvText = rows.join('\n');
+
+  const copySuccess = () => {
+    if (navigator.vibrate) navigator.vibrate([40]);
+    showLiveToast(
+      '📋 Data Berhasil Disalin!',
+      'Buka Google Sheets, klik kotak A1, lalu pilih Tempel / Paste (Ctrl+V). Seluruh tabel langsung terisi rapi!'
+    );
+  };
+
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(tsvText).then(copySuccess).catch(() => {
+      fallbackCopy(tsvText, copySuccess);
+    });
+  } else {
+    fallbackCopy(tsvText, copySuccess);
+  }
+}
+
+function fallbackCopy(text, callback) {
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.position = 'fixed';
+  ta.style.left = '-9999px';
+  document.body.appendChild(ta);
+  ta.focus();
+  ta.select();
+  try {
+    document.execCommand('copy');
+    callback();
+  } catch (err) {
+    showLiveToast('⚠️ Salin Manual', 'Silakan pilih Unduh Mutasi (CSV) jika browser membatasi clipboard.');
+  }
+  document.body.removeChild(ta);
 }
 
 // Automatic Google Drive Spreadsheet Handler
@@ -1152,7 +1579,7 @@ function createSpreadsheetInGoogleDrive() {
   // Open Google Sheets creation endpoint with pre-filled title in active user's Google Drive session
   const directCreateUrl = `https://docs.google.com/spreadsheets/create?title=${encodeURIComponent(title)}`;
   window.open(directCreateUrl, '_blank');
-  showLiveToast('⚡ Google Drive Terhubung', `Membuka lembar kerja baru "${title}" di Google Drive Anda.`);
+  showLiveToast('⚡ Google Sheets Dibuka', `Membuka lembar kerja baru di Google Drive. Klik sel A1 lalu tekan Paste (Ctrl+V) jika sudah menyalin data.`);
 }
 
 function handleAutoSheetOpen(e) {
@@ -1250,6 +1677,17 @@ function exportPersonalCsv() {
   csv += `TOTAL PENERIMAAN (CR)    : ${formatRupiah(totalIncome)}\n`;
   csv += `TOTAL PENGELUARAN (DB)   : ${formatRupiah(totalExpense)}\n`;
   csv += `SELISIH BERJALAN         : ${formatRupiah(totalIncome - totalExpense)}\n`;
+
+  const activeSpace = getActiveSpace();
+  if (activeSpace && activeSpace.wallets && activeSpace.wallets.length > 0) {
+    csv += '----------------------------------------------------------------------------------------------------\n';
+    csv += 'STATUS SALDO DOMPET SAAT INI (KAS UTAMA & LAINNYA):\n';
+    activeSpace.wallets.forEach(w => {
+      csv += ` - ${w.name.padEnd(25)}: ${formatRupiah(w.balance)}\n`;
+    });
+    const totalWalletBal = activeSpace.wallets.reduce((sum, w) => sum + Number(w.balance), 0);
+    csv += `TOTAL SALDO KAS TERSEDIA : ${formatRupiah(totalWalletBal)}\n`;
+  }
   csv += '====================================================================================================\n\n';
 
   // TABLE COLUMNS (Standard Bank Mutasi: Debet, Kredit, Saldo)
@@ -1276,19 +1714,47 @@ function exportPersonalCsv() {
   csv += '====================================================================================================\n';
 
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.setAttribute('href', url);
   const fileDate = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-  link.setAttribute('download', `Mutasi_Rekening_SakuKita_${activeUser.name.replace(/\s+/g, '_')}_${fileDate}.csv`);
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
+  const fileName = `Mutasi_Rekening_SakuKita_${activeUser.name.replace(/\s+/g, '_')}_${fileDate}.csv`;
 
-  showLiveToast(
-    '📄 Rekening Koran Mutasi Diunduh',
-    `Format rapi ala mutasi bank (${userTxList.length} transaksi ${activeUser.name}) berhasil diunduh.`
-  );
+  const doDownload = () => {
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', fileName);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    showLiveToast(
+      '📄 Rekening Koran Mutasi Siap',
+      `File CSV berhasil diunduh. Ketuk notifikasi unduhan untuk membukanya di Google Spreadsheet.`
+    );
+  };
+
+  // If on mobile device and Web Share API supports file sharing, open direct share to Google Sheets app
+  if (navigator.canShare && typeof File !== 'undefined') {
+    try {
+      const shareFile = new File([blob], fileName, { type: 'text/csv' });
+      if (navigator.canShare({ files: [shareFile] })) {
+        navigator.share({
+          files: [shareFile],
+          title: 'Mutasi Keuangan SakuKita',
+          text: 'Pilih aplikasi Google Spreadsheet untuk langsung membuka laporan mutasi ini.'
+        }).then(() => {
+          showLiveToast('📲 Dibuka di Spreadsheet', 'Pilih aplikasi Google Spreadsheet untuk melihat mutasi.');
+        }).catch((err) => {
+          if (err.name !== 'AbortError') {
+            doDownload();
+          }
+        });
+        return;
+      }
+    } catch (e) {
+      // Fallback
+    }
+  }
+
+  doDownload();
 }
 
 // STRICT PERSONAL PDF EXPORT: Authentic Bank Statement (Rekening Koran) PDF
@@ -1463,6 +1929,24 @@ function exportPersonalPdf() {
   doc.setTextColor(30, 64, 175);
   doc.text(formatRupiah(netDiff), 142, 77);
 
+  // 3b. ACTIVE WALLETS BALANCE SUMMARY STRIP (Kas Utama & Dompet Lainnya)
+  const activeSpace = getActiveSpace();
+  let startTableY = 86;
+  if (activeSpace && activeSpace.wallets && activeSpace.wallets.length > 0) {
+    doc.setFillColor(241, 245, 249);
+    doc.setDrawColor(203, 213, 225);
+    doc.roundedRect(14, 83, 182, 7, 1.5, 1.5, 'FD');
+    doc.setFontSize(6.5);
+    doc.setTextColor(71, 85, 105);
+    doc.setFont('helvetica', 'bold');
+    
+    const walletTextParts = activeSpace.wallets.map(w => `${w.name}: ${formatRupiah(w.balance)}`).join('  |  ');
+    const totalWalletBal = activeSpace.wallets.reduce((s, w) => s + Number(w.balance), 0);
+    const fullWalletLine = `STATUS SALDO DOMPET SAAT INI:  ${walletTextParts}  (Total Kas: ${formatRupiah(totalWalletBal)})`;
+    doc.text(fullWalletLine, 18, 87.5);
+    startTableY = 93;
+  }
+
   // 4. TRANSACTION ROWS
   let runningBal = 0;
   const tableRows = userTxList.map((t, idx) => {
@@ -1488,7 +1972,7 @@ function exportPersonalPdf() {
   });
 
   doc.autoTable({
-    startY: 85,
+    startY: startTableY,
     margin: { left: 14, right: 14, bottom: 20 },
     head: [[
       'No',

@@ -1302,26 +1302,67 @@ body {
   line-height: 1.3;
 }
 
-/* Currency Input Large */
+/* Currency Input Large (Fixed Prefix & No Overlap) */
 .currency-input-wrapper {
   position: relative;
   display: flex;
   align-items: center;
+  width: 100%;
 }
 
 .currency-prefix {
   position: absolute;
   left: 14px;
   font-weight: 800;
-  font-size: 1.1rem;
+  font-size: 1.05rem;
   color: #60a5fa;
+  pointer-events: none;
+  z-index: 2;
+  user-select: none;
+  line-height: 1;
+}
+
+.currency-input-wrapper .form-control {
+  padding-left: 48px !important;
+  font-weight: 700;
 }
 
 .amount-field {
-  padding-left: 45px;
   font-size: 1.3rem;
   font-weight: 800;
   letter-spacing: -0.02em;
+}
+
+.label-with-badge-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.badge-feature-pill {
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  color: #34d399;
+  font-size: 0.65rem;
+  font-weight: 800;
+  padding: 2px 7px;
+  border-radius: 6px;
+  letter-spacing: 0.02em;
+}
+
+.wallet-admin-fee-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(59, 130, 246, 0.14);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  color: #93c5fd;
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-top: 5px;
 }
 
 /* Type Switcher */
@@ -2131,6 +2172,79 @@ body {
   text-decoration: none;
 }
 
+.btn-gsheets-copy {
+  width: 100%;
+  background: linear-gradient(135deg, #10b981, #059669);
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 10px;
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+  box-shadow: 0 2px 10px rgba(16, 185, 129, 0.25);
+  transition: all 0.2s ease;
+}
+
+.btn-gsheets-copy:hover {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+}
+
+.gsheets-quick-guide-box {
+  margin-top: 10px;
+  padding: 10px 12px;
+  background: rgba(16, 185, 129, 0.08);
+  border: 1px dashed rgba(16, 185, 129, 0.35);
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  font-size: 0.7rem;
+  color: #cbd5e1;
+}
+
+.guide-step-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex: 1;
+}
+
+.guide-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #10b981;
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.65rem;
+  flex-shrink: 0;
+}
+
+.guide-step-arrow {
+  color: #64748b;
+  font-weight: bold;
+}
+
+.badge-wallet {
+  display: inline-block;
+  padding: 2px 7px;
+  background: rgba(96, 165, 250, 0.15);
+  color: #93c5fd;
+  border-radius: 4px;
+  font-size: 0.68rem;
+  font-weight: 600;
+}
+
 .settings-block {
   background: var(--bg-surface-elevated);
   border: 1px solid var(--border-subtle);
@@ -2553,4 +2667,229 @@ body {
 
 .btn-submit-manual-login:active {
   transform: scale(0.97);
+}
+
+/* ==========================================================================
+   Danger / Wallet Deletion Confirmation Modal Styles
+   ========================================================================== */
+.modal-danger-dialog {
+  max-width: 440px;
+}
+
+.danger-dialog-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(244, 63, 94, 0.2);
+}
+
+.danger-dialog-icon-ring {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(244, 63, 94, 0.15);
+  border: 1px solid rgba(244, 63, 94, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.3rem;
+  flex-shrink: 0;
+  box-shadow: 0 0 15px rgba(244, 63, 94, 0.2);
+}
+
+.danger-dialog-title {
+  font-size: 1rem;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: -0.01em;
+}
+
+.danger-dialog-sub {
+  display: block;
+  font-size: 0.72rem;
+  color: #94a3b8;
+  margin-top: 1px;
+}
+
+.delete-wallet-target-card {
+  background: rgba(15, 23, 42, 0.75);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  margin-bottom: 12px;
+}
+
+.target-wallet-top-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.target-wallet-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.target-wallet-name {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.target-wallet-sub {
+  font-size: 0.7rem;
+  color: #94a3b8;
+}
+
+.target-wallet-balance-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 8px;
+  border-top: 1px dashed rgba(255, 255, 255, 0.1);
+  font-size: 0.8rem;
+  color: #cbd5e1;
+}
+
+.target-wallet-balance-row strong {
+  font-size: 1rem;
+  color: #60a5fa;
+  font-weight: 800;
+}
+
+.danger-alert-box {
+  background: rgba(244, 63, 94, 0.08);
+  border: 1px solid rgba(244, 63, 94, 0.25);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  margin-bottom: 14px;
+}
+
+.danger-alert-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  color: #fda4af;
+  margin-bottom: 6px;
+}
+
+.danger-alert-list {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 0.72rem;
+  color: #e2e8f0;
+  line-height: 1.5;
+}
+
+.danger-alert-list li {
+  margin-bottom: 4px;
+}
+
+.balance-transfer-option-box {
+  background: rgba(30, 41, 59, 0.7);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  border-radius: var(--radius-md);
+  padding: 12px;
+  margin-bottom: 14px;
+}
+
+.transfer-box-label {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #93c5fd;
+  margin-bottom: 6px;
+}
+
+.danger-confirm-check-wrap {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  margin-bottom: 16px;
+}
+
+.danger-confirm-check-label {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 0.74rem;
+  color: #cbd5e1;
+  cursor: pointer;
+  line-height: 1.4;
+}
+
+.danger-confirm-check-label input {
+  margin-top: 2px;
+  accent-color: #f43f5e;
+  cursor: pointer;
+}
+
+.danger-dialog-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.btn-danger-confirm {
+  flex: 1;
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 11px;
+  color: #fff;
+  font-size: 0.82rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(239, 68, 68, 0.35);
+  transition: all 0.2s ease;
+}
+
+.btn-danger-confirm:disabled {
+  background: rgba(255, 255, 255, 0.08);
+  color: #64748b;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.btn-danger-confirm:not(:disabled):hover {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+}
+
+.wallet-top-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.wallet-card-del-btn {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(244, 63, 94, 0.15);
+  color: #f43f5e;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  transition: all 0.2s ease;
+}
+
+.wallet-card-del-btn:hover {
+  background: #f43f5e;
+  color: #ffffff;
+  transform: scale(1.1);
 }
