@@ -1,5 +1,5 @@
 // SakuKita Service Worker - Offline Caching & PWA Ready
-const CACHE_NAME = 'sakukita-cache-v29-instant-revocation-naming-fix';
+const CACHE_NAME = 'sakukita-cache-v30-cloud-purge-stable-switch';
 const ASSETS = [
   './',
   './index.html',

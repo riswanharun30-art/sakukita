@@ -335,6 +335,14 @@
       <div id="user-profile-subdetail" style="margin-bottom:8px;"></div>
       <div class="user-pill-selector" id="user-pill-container" title="Pilih anggota keluarga aktif"></div>
 
+      <!-- Tombol Bersihkan Cloud & Akun Pantauan Lengket -->
+      <div id="clean-cloud-quick-box" style="margin-top:6px; margin-bottom:12px;">
+        <button type="button" class="btn-clean-cloud-sheet" onclick="closeAccountModal(); cleanAndPurgeCloudMonitoredAccount();" style="width:100%; padding:9px 14px; border-radius:10px; background:rgba(239,68,68,0.12); border:1px solid rgba(239,68,68,0.3); color:#fca5a5; font-size:0.78rem; font-weight:600; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px;">
+          <span>🧹</span>
+          <span>Bersihkan Cloud &amp; Copot Akun Pantauan (Akun Lengket)</span>
+        </button>
+      </div>
+
       <!-- Menu Navigation Tiles -->
       <div class="account-menu-list">
         <div class="account-tile-btn" onclick="closeAccountModal(); openGoogleSheetsModal();">
@@ -1487,10 +1495,10 @@ ALTER PUBLICATION supabase_realtime ADD TABLE spaces;</code></pre>
           <button type="submit" class="btn-submit-tx">Simpan Nama</button>
         </div>
 
-        <!-- Tombol Berhenti Memantau -->
+        <!-- Tombol Berhenti Memantau & Bersihkan Cloud -->
         <div style="margin-top: 18px; padding-top: 14px; border-top: 1px dashed rgba(244, 63, 94, 0.25); text-align: center;">
-          <button type="button" class="btn-preset-pill" onclick="handleLeaveMonitoredSpace()" style="border-color: rgba(244,63,94,0.3); color: #f87171; background: transparent; padding: 6px 14px;">
-            🚪 Hapus Buku Kas Ini dari HP Saya
+          <button type="button" class="btn-preset-pill btn-clean-cloud-banner" onclick="handleLeaveMonitoredSpace()" style="border-color: rgba(244,63,94,0.4); color: #fca5a5; background: rgba(239,68,68,0.1); padding: 8px 16px; border-radius:8px; font-weight:600; cursor:pointer;">
+            🧹 Bersihkan Cloud &amp; Copot Buku Kas Ini
           </button>
         </div>
       </form>

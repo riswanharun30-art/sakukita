@@ -472,6 +472,66 @@ function removeSpaceAlias(spaceId) {
   } catch (e) {}
 }
 
+// Revoked & Dismissed Spaces Blacklist (Prevents Stale Cloud Invites from Re-adding Revoked Spaces)
+function getRevokedSpaces() {
+  try {
+    const raw = localStorage.getItem('sakukita_revoked_spaces_v1');
+    return raw ? JSON.parse(raw) : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+function addRevokedSpace(spaceId, originalSpaceId, ownerEmail) {
+  try {
+    const list = getRevokedSpaces();
+    const cleanEmail = (ownerEmail || '').toLowerCase().trim();
+    const exists = list.some(item => 
+      (spaceId && item.spaceId === spaceId) || 
+      (originalSpaceId && item.originalSpaceId === originalSpaceId) ||
+      (cleanEmail && item.ownerEmail === cleanEmail)
+    );
+    if (!exists) {
+      list.push({
+        spaceId: spaceId || '',
+        originalSpaceId: originalSpaceId || '',
+        ownerEmail: cleanEmail,
+        revokedAt: Date.now()
+      });
+      localStorage.setItem('sakukita_revoked_spaces_v1', JSON.stringify(list));
+    }
+  } catch (e) {}
+}
+
+function isSpaceRevoked(spaceId, originalSpaceId, ownerEmail) {
+  const list = getRevokedSpaces();
+  if (!list || list.length === 0) return false;
+  const cleanEmail = (ownerEmail || '').toLowerCase().trim();
+  return list.some(item => {
+    if (spaceId && item.spaceId && item.spaceId === spaceId) return true;
+    if (originalSpaceId && item.originalSpaceId && item.originalSpaceId === originalSpaceId) return true;
+    if (cleanEmail && item.ownerEmail && item.ownerEmail === cleanEmail) return true;
+    return false;
+  });
+}
+
+function getProcessedCloudInvites() {
+  try {
+    const raw = localStorage.getItem('sakukita_processed_invites_v1');
+    return raw ? JSON.parse(raw) : {};
+  } catch (e) {
+    return {};
+  }
+}
+
+function markCloudInviteProcessed(inviteKey) {
+  try {
+    const map = getProcessedCloudInvites();
+    map[inviteKey] = Date.now();
+    localStorage.setItem('sakukita_processed_invites_v1', JSON.stringify(map));
+  } catch (e) {}
+}
+
 function applySavedSpaceAliases() {
   // Always clean up any accidental legacy space_1 alias
   removeSpaceAlias('space_1');
@@ -533,7 +593,7 @@ function loadData() {
     }
   });
 
-  // Self-heal local owner profile if it was mistakenly renamed to Beti by previous bug
+  // Self-heal local owner profile if it was mistakenly renamed by previous bug
   const localUser = Object.values(users).find(u => !u.isRemoteOwner) || users.user_1;
   if (localUser) {
     if (localUser.name && localUser.name.toLowerCase().includes('beti')) {
@@ -552,6 +612,34 @@ function loadData() {
     spaces.space_1.name = `Buku Kas Utama (${primaryOwnerName})`;
   }
 
+  // Purge any revoked remote spaces that may still linger in storage
+  const revokedSpaces = getRevokedSpaces();
+  if (revokedSpaces && revokedSpaces.length > 0) {
+    let spacesCleaned = false;
+    Object.keys(spaces).forEach(sId => {
+      const sp = spaces[sId];
+      if (sp && sp.isRemoteShared) {
+        const ownerObj = users[sp.ownerId];
+        const ownerEmail = ownerObj ? ownerObj.email : '';
+        if (isSpaceRevoked(sId, sp.originalSpaceId, ownerEmail)) {
+          console.warn('Purging revoked space on startup:', sId);
+          delete spaces[sId];
+          spacesCleaned = true;
+          if (sp.ownerId && (sp.ownerId.startsWith('partner_') || (users[sp.ownerId] && users[sp.ownerId].isRemoteOwner))) {
+            const isStillUsed = Object.values(spaces).some(s => s.ownerId === sp.ownerId);
+            if (!isStillUsed) {
+              delete users[sp.ownerId];
+            }
+          }
+        }
+      }
+    });
+    if (spacesCleaned) {
+      saveSpaces();
+      saveUsers();
+    }
+  }
+
   const savedUserId = localStorage.getItem('sakukita_current_user_id');
   if (savedUserId && users[savedUserId] && !users[savedUserId].isRemoteOwner) {
     activeUserId = savedUserId;
@@ -563,6 +651,16 @@ function loadData() {
       if (firstUserId) activeUserId = firstUserId;
     }
     localStorage.setItem('sakukita_current_user_id', activeUserId);
+  }
+
+  // Safely restore activeSpaceId or fallback to user's primary space
+  const savedSpaceId = localStorage.getItem('sakukita_active_space_id');
+  if (savedSpaceId && spaces[savedSpaceId] && !isSpaceRevoked(savedSpaceId, spaces[savedSpaceId].originalSpaceId, users[spaces[savedSpaceId].ownerId]?.email)) {
+    activeSpaceId = savedSpaceId;
+  } else {
+    const localPrimarySpace = Object.values(spaces).find(s => !s.isRemoteShared && s.ownerId === activeUserId) || spaces.space_1;
+    activeSpaceId = localPrimarySpace ? localPrimarySpace.id : 'space_1';
+    localStorage.setItem('sakukita_active_space_id', activeSpaceId);
   }
 
   // Apply permanent custom aliases across spaces & users
@@ -746,7 +844,7 @@ function renderUserPills() {
     const partnerBtn = document.createElement('button');
     partnerBtn.type = 'button';
     partnerBtn.className = `user-pill user-pill-monitored ${isThisMonitoredActive ? 'active' : ''}`;
-    partnerBtn.title = `Akun Terhubung: ${originalNameInApk} (Hanya Pantau)`;
+    partnerBtn.title = `Akun Terhubung: ${originalNameInApk} (Hanya Pantau). Klik tanda × untuk mencopot.`;
     partnerBtn.onclick = () => {
       // Switch view to this monitored space, but activeUserId REMAINS local owner!
       activeSpaceId = sp.id;
@@ -764,6 +862,7 @@ function renderUserPills() {
     partnerBtn.innerHTML = `
       <span class="pill-avatar" style="font-size:0.85rem;">👁️</span>
       <span>${escapeHtml(originalNameInApk)}</span>
+      <span class="pill-remove-btn" title="Copot akun pantauan ini & bersihkan cloud" onclick="event.stopPropagation(); cleanAndPurgeCloudMonitoredAccount('${sp.id}');">&times;</span>
     `;
     container.appendChild(partnerBtn);
   });
@@ -993,14 +1092,18 @@ function isOwnerOfCurrentSpace() {
 
 function validateActiveSpace() {
   const accessible = getAccessibleSpacesForUser(activeUserId);
-  const isAccessible = accessible.some(s => s.id === activeSpaceId);
+  const isAccessible = accessible.some(s => s.id === activeSpaceId && !isSpaceRevoked(s.id, s.originalSpaceId, users[s.ownerId]?.email));
 
   if (!isAccessible) {
-    if (accessible.length > 0) {
+    const localPrimarySpace = Object.values(spaces).find(s => !s.isRemoteShared && s.ownerId === activeUserId) || spaces.space_1;
+    if (localPrimarySpace) {
+      activeSpaceId = localPrimarySpace.id;
+    } else if (accessible.length > 0) {
       activeSpaceId = accessible[0].id;
     } else {
       activeSpaceId = 'space_1';
     }
+    localStorage.setItem('sakukita_active_space_id', activeSpaceId);
   }
 }
 
@@ -1009,8 +1112,21 @@ function getActiveSpace() {
 }
 
 function handleSpaceChange(newSpaceId) {
+  if (!spaces[newSpaceId]) return;
   activeSpaceId = newSpaceId;
+  localStorage.setItem('sakukita_active_space_id', newSpaceId);
   currentFilter = 'all';
+
+  // Ensure activeUserId stays local owner
+  const localOwner = Object.values(users).find(u => !u.isRemoteOwner) || users.user_1;
+  if (localOwner && activeUserId !== localOwner.id) {
+    activeUserId = localOwner.id;
+    localStorage.setItem('sakukita_current_user_id', localOwner.id);
+  }
+
+  renderUserPills();
+  renderActiveUserProfile();
+  updateSpaceSelectorUI();
   renderAll();
   checkAndProcessMonthlyAdminFees();
 }
@@ -1100,7 +1216,17 @@ function renderAll() {
     }
   } else {
     viewerBanner.classList.remove('hidden');
-    viewerDesc.innerHTML = `Buku kas ini milik <strong>${escapeHtml(ownerUser.name)}</strong> (${escapeHtml(ownerUser.email)}). Anda memiliki <strong>Izin Memantau (Read-Only)</strong>. Seluruh fitur unduh, sinkronisasi, dan pencatatan dinonaktifkan.`;
+    viewerDesc.innerHTML = `
+      <div>Buku kas ini milik <strong>${escapeHtml(ownerUser.name)}</strong> (${escapeHtml(ownerUser.email)}). Anda memiliki <strong>Izin Memantau (Read-Only)</strong>. Seluruh fitur unduh, sinkronisasi, dan pencatatan dinonaktifkan.</div>
+      <div style="margin-top:8px; display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+        <button type="button" class="btn-clean-cloud-banner" onclick="cleanAndPurgeCloudMonitoredAccount('${currentSpace.id}')" style="padding:5px 12px; background:rgba(239,68,68,0.22); border:1px solid rgba(239,68,68,0.45); color:#fca5a5; border-radius:8px; font-size:0.75rem; font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:5px;">
+          <span>🧹</span><span>Bersihkan Cloud &amp; Copot Akun Ini</span>
+        </button>
+        <button type="button" onclick="openRenameMonitoredModal('${currentSpace.id}')" style="padding:5px 12px; background:rgba(59,130,246,0.2); border:1px solid rgba(59,130,246,0.4); color:#93c5fd; border-radius:8px; font-size:0.75rem; cursor:pointer; display:inline-flex; align-items:center; gap:5px;">
+          <span>✏️</span><span>Ubah Panggilan</span>
+        </button>
+      </div>
+    `;
     roleTag.className = 'role-badge role-viewer';
     roleTag.textContent = '👁️ Pantau';
     spaceOwnerLabel.innerHTML = `Memantau: <b>${escapeHtml(currentSpace.name)}</b> <span class="rename-inline-btn" onclick="openRenameMonitoredModal('${currentSpace.id}')" title="Ubah Nama Panggilan Buku Kas Ini" style="cursor:pointer; margin-left:6px; font-size:0.7rem; color:#93c5fd; text-decoration:underline;">✏️ Ubah Panggilan</span>`;
@@ -3018,8 +3144,8 @@ function openCollabModal() {
               (Bisa diubah bebas, misal: "Buku Kas Kakak", "Buku Kas Istri", atau "Adik" agar mudah dikenali di daftar pilihan buku kas).
             </span>
           </div>
-          <button type="button" class="btn-toggle-access btn-revoke" onclick="handleLeaveMonitoredSpace()" style="margin-top:12px; width:100%; justify-content:center; padding:10px 14px; font-size:0.78rem; border-radius:10px; display:flex; align-items:center; gap:6px;">
-            <span>🚪</span><span>Berhenti Memantau / Hapus Buku Kas Ini</span>
+          <button type="button" class="btn-toggle-access btn-revoke" onclick="cleanAndPurgeCloudMonitoredAccount('${currentSpace.id}')" style="margin-top:12px; width:100%; justify-content:center; padding:10px 14px; font-size:0.78rem; border-radius:10px; display:flex; align-items:center; gap:6px;">
+            <span>🧹</span><span>Bersihkan Cloud &amp; Copot Akun Pantauan Ini</span>
           </button>
         </div>
       </div>
@@ -3625,7 +3751,7 @@ function setupRealtimeListeners() {
   }
 
   window.addEventListener('storage', (e) => {
-    if (e.key === 'sakukita_spaces_v3' || e.key === 'sakukita_users_v3') {
+    if (e.key === 'sakukita_spaces_v6' || e.key === 'sakukita_users_v6' || e.key === 'sakukita_active_space_id' || e.key === 'sakukita_revoked_spaces_v1') {
       loadData();
       validateActiveSpace();
       renderUserPills();
@@ -3968,25 +4094,115 @@ async function publishCloudRevocation(space, targetUser, targetUserId) {
   }
 }
 
-function handleRemoteSpaceRevoked(spaceId, ownerName = 'Pemilik') {
+async function publishCloudRevocationTombstone(space, ownerUser) {
+  if (!space) return;
+  try {
+    const currentUser = getActiveUser();
+    const myEmail = (currentUser && currentUser.email) ? currentUser.email.toLowerCase().trim() : '';
+    const rawSpaceId = space.originalSpaceId || space.id;
+    const spaceCloudTopic = space.cloudTopic || getSyncTopicForSpace(rawSpaceId, ownerUser?.email);
+    const userTopic = myEmail ? getSyncTopicForEmail(myEmail) : null;
+
+    const payload = {
+      action: 'SPACE_REVOKED',
+      timestamp: Date.now() + 5000,
+      spaceId: rawSpaceId,
+      targetUserId: activeUserId,
+      targetEmail: myEmail,
+      ownerEmail: ownerUser?.email || '',
+      ownerName: ownerUser?.name || 'Pemilik',
+      spaceName: space.name,
+      isCleanedByUser: true
+    };
+
+    const jsonStr = JSON.stringify(payload);
+
+    if (spaceCloudTopic) {
+      fetch(`https://ntfy.sh/${spaceCloudTopic}`, {
+        method: 'POST',
+        headers: { 'Title': 'Akses Pantau Dicopot', 'Priority': 'urgent' },
+        body: jsonStr
+      }).catch(() => {});
+    }
+
+    if (userTopic) {
+      fetch(`https://ntfy.sh/${userTopic}`, {
+        method: 'POST',
+        headers: { 'Title': 'Akses Pantau Dicopot', 'Priority': 'urgent' },
+        body: jsonStr
+      }).catch(() => {});
+    }
+  } catch (e) {}
+}
+
+async function cleanAndPurgeCloudMonitoredAccount(spaceId) {
+  const targetSpaceId = spaceId || (spaces[activeSpaceId]?.isRemoteShared ? activeSpaceId : null);
+
+  if (targetSpaceId && spaces[targetSpaceId]) {
+    const targetSpace = spaces[targetSpaceId];
+    const ownerObj = users[targetSpace.ownerId] || { name: 'Pemilik' };
+    const ownerName = ownerObj.name || ownerObj.originalName || 'Pemilik';
+
+    if (confirm(`🧹 Bersihkan Cloud & Lepas Hubungan:\n\nApakah Anda yakin ingin mencopot buku kas "${targetSpace.name}" milik ${ownerName}?\n\n• Buku kas ini akan dihapus permanen dari HP Anda.\n• Cloud ntfy akan dibersihkan agar akun tidak muncul lagi.\n• Tampilan dashboard akan kembali stabil ke akun utama Anda.`)) {
+      handleRemoteSpaceRevoked(targetSpaceId, ownerName, true);
+      showLiveToast('🧹 Cloud Berhasil Dibersihkan', `Buku kas "${targetSpace.name}" telah dicopot permanen. Tampilan kembali stabil ke Akun Utama.`);
+    }
+    return;
+  }
+
+  // If no specific remote space is active, check all remote spaces
+  const remoteSpaces = Object.values(spaces).filter(s => s.isRemoteShared || (users[s.ownerId] && users[s.ownerId].isRemoteOwner));
+  if (remoteSpaces.length > 0) {
+    if (confirm(`🧹 Bersihkan Cloud & Lepas Akun Pantauan:\n\nDitemukan ${remoteSpaces.length} buku kas pantauan di HP Anda.\nApakah Anda ingin mencopot semuanya dan membersihkan cloud?`)) {
+      remoteSpaces.forEach(sp => {
+        const ownerName = (users[sp.ownerId] && users[sp.ownerId].name) || 'Pemilik';
+        handleRemoteSpaceRevoked(sp.id, ownerName, true);
+      });
+      localStorage.removeItem('sakukita_processed_invites_v1');
+      showLiveToast('🧹 Cloud Berhasil Dibersihkan', 'Semua akun pantauan telah dicopot. Dashboard kini stabil di Akun Utama Anda.');
+    }
+  } else {
+    if (confirm('🧹 Bersihkan Riwayat Cloud:\n\nTidak ada buku kas pantauan aktif di HP Anda. Ingin membersihkan cache riwayat undangan cloud yang tersimpan?')) {
+      const currentUser = getActiveUser();
+      if (currentUser && currentUser.email) {
+        publishCloudRevocationTombstone({ id: 'all_revoked', originalSpaceId: 'all_revoked', name: 'Semua Pantauan' }, { email: currentUser.email, name: currentUser.name });
+      }
+      localStorage.removeItem('sakukita_processed_invites_v1');
+      showLiveToast('✅ Cloud Bersih', 'Cache riwayat cloud telah dibersihkan.');
+    }
+  }
+}
+
+function handleRemoteSpaceRevoked(spaceId, ownerName = 'Pemilik', publishTombstone = false) {
   if (!spaceId) return;
   const space = spaces[spaceId];
   if (!space) return;
 
   const spaceName = space.name || 'Buku Kas';
+  const rawSpaceId = space.originalSpaceId || spaceId;
   const partnerOwnerId = space.ownerId;
+  const ownerUser = users[partnerOwnerId];
+  const ownerEmail = (ownerUser && ownerUser.email) ? ownerUser.email : '';
 
-  // 1. Remove space aliases permanently
-  removeSpaceAlias(spaceId);
-  if (space.originalSpaceId) {
-    removeSpaceAlias(space.originalSpaceId);
+  // 1. Blacklist permanently in sakukita_revoked_spaces so it will NEVER be resurrected
+  addRevokedSpace(spaceId, rawSpaceId, ownerEmail);
+
+  // 2. Publish tombstone to cloud if requested
+  if (publishTombstone) {
+    publishCloudRevocationTombstone(space, ownerUser);
   }
 
-  // 2. Delete the remote space
+  // 3. Remove space aliases permanently
+  removeSpaceAlias(spaceId);
+  if (rawSpaceId) {
+    removeSpaceAlias(rawSpaceId);
+  }
+
+  // 4. Delete the remote space
   delete spaces[spaceId];
   saveSpaces();
 
-  // 3. Clean up partner owner user if no other spaces reference them
+  // 5. Clean up partner owner user if no other spaces reference them
   if (partnerOwnerId && (partnerOwnerId.startsWith('partner_') || (users[partnerOwnerId] && users[partnerOwnerId].isRemoteOwner))) {
     const isStillUsed = Object.values(spaces).some(s => s.ownerId === partnerOwnerId);
     if (!isStillUsed) {
@@ -3995,10 +4211,11 @@ function handleRemoteSpaceRevoked(spaceId, ownerName = 'Pemilik') {
     }
   }
 
-  // 4. If current active space was revoked, switch immediately to primary local space
-  if (activeSpaceId === spaceId) {
-    const localOwner = Object.values(users).find(u => !u.isRemoteOwner) || users.user_1;
-    const localSpace = Object.values(spaces).find(s => !s.isRemoteShared && s.ownerId === (localOwner ? localOwner.id : 'user_1')) || spaces.space_1;
+  // 6. Ensure active space is reset to local primary space
+  const localOwner = Object.values(users).find(u => !u.isRemoteOwner) || users.user_1;
+  const localSpace = Object.values(spaces).find(s => !s.isRemoteShared && s.ownerId === (localOwner ? localOwner.id : 'user_1')) || spaces.space_1;
+
+  if (activeSpaceId === spaceId || !spaces[activeSpaceId]) {
     activeSpaceId = localSpace ? localSpace.id : 'space_1';
     localStorage.setItem('sakukita_active_space_id', activeSpaceId);
     if (localOwner) {
@@ -4007,19 +4224,19 @@ function handleRemoteSpaceRevoked(spaceId, ownerName = 'Pemilik') {
     }
   }
 
-  // 5. Close any open collab/rename modals
+  // 7. Close any open collab/rename modals
   closeModal('modal-collaboration');
   closeModal('modal-rename-monitored');
 
-  // 6. Refresh UI
+  // 8. Refresh UI
   validateActiveSpace();
   renderUserPills();
   renderActiveUserProfile();
   updateSpaceSelectorUI();
   renderAll();
 
-  // 7. Inform user immediately via toast
-  showLiveToast('🚫 Izin Akses Dicabut', `Pemilik (${ownerName}) telah mencabut izin memantau untuk "${spaceName}". Buku kas telah dihapus otomatis dari HP Anda.`);
+  // 9. Inform user immediately via toast
+  showLiveToast('🚫 Izin Akses Dicabut', `Pemilik (${ownerName}) telah mencabut izin memantau untuk "${spaceName}". Buku kas telah dihapus permanen dari HP Anda.`);
   notifyOtherTabs('SPACE_REVOKED', { spaceId });
 }
 
@@ -4107,7 +4324,7 @@ function processUrlJoinSpaceParam() {
   }
 }
 
-function applyRemoteSpaceJoin(data, sourceLabel) {
+function applyRemoteSpaceJoin(data, sourceLabel, switchActive = true) {
   const spaceObj = data.space || data;
   const rawSpaceId = data.spaceId || spaceObj.id;
   if (!rawSpaceId) return;
@@ -4115,6 +4332,12 @@ function applyRemoteSpaceJoin(data, sourceLabel) {
   const ownerName = spaceObj.ownerName || 'Pasangan';
   const ownerEmail = spaceObj.ownerEmail || '';
   const incomingOwnerId = spaceObj.ownerId || 'owner_remote';
+
+  // Security & Stability: Never re-import revoked/disconnected space
+  if (isSpaceRevoked(null, rawSpaceId, ownerEmail)) {
+    console.warn('Skipping revoked space join:', rawSpaceId, ownerEmail);
+    return;
+  }
 
   // 1. Generate unique partner owner ID in local users (distinct from local activeUserId!)
   const partnerOwnerId = 'partner_' + getSyncHash(ownerEmail || incomingOwnerId || ownerName);
@@ -4174,9 +4397,12 @@ function applyRemoteSpaceJoin(data, sourceLabel) {
     }
   }
 
-  // 6. Switch to the newly connected space
-  activeSpaceId = remoteSpaceId;
-  localStorage.setItem('sakukita_active_space_id', remoteSpaceId);
+  // 6. Switch to the newly connected space ONLY if switchActive === true
+  if (switchActive) {
+    activeSpaceId = remoteSpaceId;
+    localStorage.setItem('sakukita_active_space_id', remoteSpaceId);
+  }
+
   saveUsers();
   saveSpaces();
 
@@ -4187,13 +4413,20 @@ function applyRemoteSpaceJoin(data, sourceLabel) {
   populateCategoryPicker();
   renderAll();
 
-  // Immediately poll full cloud updates for this space
+  // Immediately poll full cloud updates for this space quietly
   pollSpaceFromCloud(remoteSpaceId, false);
 
-  showLiveToast(
-    '🎉 Buku Kas Terhubung!',
-    `Berhasil terhubung ke Buku Kas "${spaces[remoteSpaceId].name}" milik ${ownerName} (${sourceLabel || 'Cloud'}). Anda berstatus Pemantau (Read-Only).`
-  );
+  if (switchActive) {
+    showLiveToast(
+      '🎉 Buku Kas Terhubung!',
+      `Berhasil terhubung ke Buku Kas "${spaces[remoteSpaceId].name}" milik ${ownerName} (${sourceLabel || 'Cloud'}). Anda berstatus Pemantau (Read-Only).`
+    );
+  } else {
+    showLiveToast(
+      '📬 Undangan Pantau Diterima',
+      `Buku Kas "${spaces[remoteSpaceId].name}" milik ${ownerName} telah tersedia di daftar pilihan buku kas.`
+    );
+  }
 }
 
 let cloudSyncTimer = null;
@@ -4210,30 +4443,63 @@ async function checkPendingCloudInvites() {
     if (!res.ok) return;
     const text = await res.text();
     const lines = text.split('\n');
+    const processedInvites = getProcessedCloudInvites();
+
+    // 1. Gather all payloads and sort chronologically
+    const items = [];
     for (const line of lines) {
       if (!line.trim()) continue;
       try {
         const item = JSON.parse(line);
         if (item.event === 'message') {
           const payload = await parseNtfyItem(item);
-          if (payload) {
-            if (payload.action === 'SPACE_INVITE' && payload.space) {
-              applyRemoteSpaceJoin(payload.space, 'Undangan Cloud Otomatis');
-            } else if (payload.action === 'SPACE_REVOKED') {
-              const targetSpace = Object.values(spaces).find(s => 
-                s.isRemoteShared && (
-                  s.id === payload.spaceId || 
-                  s.originalSpaceId === payload.spaceId ||
-                  (payload.ownerEmail && users[s.ownerId] && users[s.ownerId].email && users[s.ownerId].email.toLowerCase() === payload.ownerEmail.toLowerCase())
-                )
-              );
-              if (targetSpace) {
-                handleRemoteSpaceRevoked(targetSpace.id, payload.ownerName || 'Pemilik');
-              }
-            }
-          }
+          if (payload) items.push(payload);
         }
       } catch (e) {}
+    }
+
+    items.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+
+    for (const payload of items) {
+      if (payload.action === 'SPACE_REVOKED') {
+        const targetSpace = Object.values(spaces).find(s => 
+          s.isRemoteShared && (
+            s.id === payload.spaceId || 
+            s.originalSpaceId === payload.spaceId ||
+            (payload.ownerEmail && users[s.ownerId] && users[s.ownerId].email && users[s.ownerId].email.toLowerCase() === payload.ownerEmail.toLowerCase())
+          )
+        );
+        addRevokedSpace(payload.spaceId, payload.spaceId, payload.ownerEmail);
+        if (targetSpace) {
+          handleRemoteSpaceRevoked(targetSpace.id, payload.ownerName || 'Pemilik', false);
+        }
+      } else if (payload.action === 'SPACE_INVITE' && payload.space) {
+        const rawSpaceId = payload.space.id || payload.space.spaceId;
+        const ownerEmail = (payload.space.ownerEmail || '').toLowerCase().trim();
+        const inviteKey = `${rawSpaceId}_${ownerEmail}`;
+
+        // Never re-import if revoked or disconnected
+        if (isSpaceRevoked(null, rawSpaceId, ownerEmail)) {
+          continue;
+        }
+
+        // Skip if this invite was already processed
+        if (processedInvites[inviteKey]) {
+          continue;
+        }
+
+        // Skip if space is already present locally
+        const partnerOwnerId = 'partner_' + getSyncHash(ownerEmail || payload.space.ownerId || payload.space.ownerName);
+        const remoteSpaceId = 'shared_' + getSyncHash(ownerEmail || payload.space.ownerId || rawSpaceId) + '_' + rawSpaceId;
+        if (spaces[remoteSpaceId]) {
+          markCloudInviteProcessed(inviteKey);
+          continue;
+        }
+
+        // Genuinely new invite in background: mark processed and add WITHOUT hijacking user's active view!
+        markCloudInviteProcessed(inviteKey);
+        applyRemoteSpaceJoin(payload.space, 'Undangan Cloud Otomatis', false);
+      }
     }
   } catch (err) {}
 }
@@ -4244,7 +4510,7 @@ async function pollSpaceFromCloud(spaceId, force = false) {
   if (!currentSpace) return;
   if (currentSpace.ownerId === activeUserId && !currentSpace.isRemoteShared) return;
 
-  const topic = currentSpace.cloudTopic || getSyncTopicForSpace(currentSpace.originalSpaceId || spaceId);
+  const topic = currentSpace.cloudTopic || getSyncTopicForSpace(currentSpace.originalSpaceId || spaceId, users[currentSpace.ownerId]?.email);
   if (!topic) return;
 
   try {
@@ -4263,11 +4529,11 @@ async function pollSpaceFromCloud(spaceId, force = false) {
           const payload = await parseNtfyItem(item);
           if (payload) {
             if (payload.action === 'SPACE_REVOKED') {
-              if (!latestRevocation || payload.timestamp > latestRevocation.timestamp) {
+              if (!latestRevocation || ((payload.timestamp || 0) > (latestRevocation.timestamp || 0))) {
                 latestRevocation = payload;
               }
             } else if (payload.action === 'SPACE_UPDATE' && payload.space) {
-              if (!latestUpdate || payload.timestamp > latestUpdate.timestamp) {
+              if (!latestUpdate || ((payload.timestamp || 0) > (latestUpdate.timestamp || 0))) {
                 latestUpdate = payload;
               }
             }
@@ -4279,31 +4545,35 @@ async function pollSpaceFromCloud(spaceId, force = false) {
     const currentUser = getActiveUser();
     const myEmail = (currentUser && currentUser.email ? currentUser.email.toLowerCase().trim() : '');
 
-    // Check if revocation happened after latest update, or if revocation applies to this user
-    if (latestRevocation && (!latestUpdate || latestRevocation.timestamp >= latestUpdate.timestamp)) {
+    // 1. Direct revocation detected
+    if (latestRevocation) {
       const targetEmail = (latestRevocation.targetEmail || '').toLowerCase().trim();
-      if (!targetEmail || !myEmail || targetEmail === myEmail || latestRevocation.targetUserId === activeUserId) {
-        handleRemoteSpaceRevoked(spaceId, latestRevocation.ownerName || 'Pemilik');
-        return;
+      const targetUserId = latestRevocation.targetUserId || '';
+      const isTargetMe = (!targetEmail && !targetUserId) || (myEmail && targetEmail === myEmail) || (targetUserId === activeUserId);
+
+      if (isTargetMe) {
+        if (!latestUpdate || ((latestRevocation.timestamp || 0) >= (latestUpdate.timestamp || 0))) {
+          handleRemoteSpaceRevoked(spaceId, latestRevocation.ownerName || 'Pemilik', false);
+          return;
+        }
       }
     }
 
+    // 2. Space update payload: verify if viewer is still in allowed viewers/emails
     if (latestUpdate && latestUpdate.space) {
       const sp = latestUpdate.space;
-
-      // Check if current user is still in allowed viewers list
       const allowedViewers = Array.isArray(sp.allowedViewers) ? sp.allowedViewers : [];
-      const allowedEmails = Array.isArray(sp.allowedViewerEmails) ? sp.allowedViewerEmails : [];
+      const allowedEmails = Array.isArray(sp.allowedViewerEmails) ? sp.allowedViewerEmails.map(e => (e||'').toLowerCase().trim()) : [];
 
       const isStillAllowed = (
-        allowedViewers.includes(activeUserId) ||
         (myEmail && allowedEmails.includes(myEmail)) ||
-        (myEmail && allowedViewers.some(v => typeof v === 'string' && v.toLowerCase().trim() === myEmail))
+        (myEmail && allowedViewers.some(v => typeof v === 'string' && v.toLowerCase().trim() === myEmail)) ||
+        (activeUserId && allowedViewers.includes(activeUserId))
       );
 
-      // If owner removed all viewers or removed this viewer specifically
-      if (!isStillAllowed && (allowedViewers.length === 0 || (allowedEmails.length > 0 && myEmail && !allowedEmails.includes(myEmail)))) {
-        handleRemoteSpaceRevoked(spaceId, sp.ownerName || 'Pemilik');
+      // If owner removed viewer access, revoke and remove immediately!
+      if (!isStillAllowed) {
+        handleRemoteSpaceRevoked(spaceId, sp.ownerName || 'Pemilik', false);
         return;
       }
 
@@ -4327,7 +4597,6 @@ async function pollSpaceFromCloud(spaceId, force = false) {
         currentSpace.budget = sp.budget;
         changed = true;
       }
-      // Keep partner owner originalName updated, but do not overwrite local nickname if hasAlias
       if (sp.ownerName && users[currentSpace.ownerId]) {
         users[currentSpace.ownerId].originalName = sp.ownerName;
         if (!hasAlias && users[currentSpace.ownerId].name !== sp.ownerName) {
@@ -4338,7 +4607,10 @@ async function pollSpaceFromCloud(spaceId, force = false) {
       if (changed) {
         saveSpaces();
         saveUsers();
-        renderAll();
+        // ONLY re-render if user is currently viewing this space!
+        if (activeSpaceId === spaceId) {
+          renderAll();
+        }
         if (force) {
           showLiveToast('🔄 Data Tersinkron', 'Data buku kas pasangan berhasil diperbarui ke kondisi terkini.');
         }
@@ -4361,14 +4633,14 @@ function setupCloudSyncLoop() {
   const doSync = () => {
     checkPendingCloudInvites();
     Object.values(spaces).forEach(sp => {
-      if (sp.ownerId !== activeUserId && (sp.isRemoteShared || sp.cloudTopic)) {
+      if (sp.isRemoteShared && sp.ownerId !== activeUserId) {
         pollSpaceFromCloud(sp.id, false);
       }
     });
   };
 
-  setTimeout(doSync, 500);
-  cloudSyncTimer = setInterval(doSync, 5000);
+  setTimeout(doSync, 1000);
+  cloudSyncTimer = setInterval(doSync, 10000);
 
   if (!window._sakukitaVisibilityHooked) {
     window._sakukitaVisibilityHooked = true;
@@ -4620,13 +4892,7 @@ function handleSaveRenameMonitored(e) {
 
 function handleLeaveMonitoredSpace() {
   const targetSpaceId = document.getElementById('rename-space-id')?.value || activeSpaceId;
-  const currentSpace = spaces[targetSpaceId];
-  if (!currentSpace) return;
-
-  if (confirm(`Apakah Anda yakin ingin berhenti memantau "${currentSpace.name}"?\nBuku kas ini akan dihapus dari daftar buku kas di HP Anda.`)) {
-    const ownerName = (users[currentSpace.ownerId] && users[currentSpace.ownerId].name) || 'Pemilik';
-    handleRemoteSpaceRevoked(targetSpaceId, ownerName);
-  }
+  cleanAndPurgeCloudMonitoredAccount(targetSpaceId);
 }
 
 
