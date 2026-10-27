@@ -1,5 +1,5 @@
 // SakuKita Service Worker - Offline Caching & PWA Ready
-const CACHE_NAME = 'sakukita-cache-v14-copy-script';
+const CACHE_NAME = 'sakukita-cache-v15-pure-notification-badge';
 const ASSETS = [
   './',
   './index.html',

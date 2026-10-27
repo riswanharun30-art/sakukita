@@ -567,11 +567,11 @@ function updateGoogleSheetsSyncIndicators() {
     if (isConnected) {
       badgePill.className = 'sheets-sync-badge-pill connected';
       badgeText.textContent = 'Sheets Terhubung ⚡';
-      badgePill.title = 'Google Sheets Auto-Sync Aktif. Setiap mutasi otomatis masuk ke Google Sheets Anda.';
+      badgePill.title = 'Pemberitahuan: Google Sheets Terhubung Otomatis (Auto-Sync Aktif).';
     } else {
       badgePill.className = 'sheets-sync-badge-pill disconnected';
       badgeText.textContent = 'Sheets Belum Konek';
-      badgePill.title = 'Google Sheets belum terhubung otomatis. Klik untuk memasukkan Webhook.';
+      badgePill.title = 'Pemberitahuan: Google Sheets Belum Konek.';
     }
   }
 

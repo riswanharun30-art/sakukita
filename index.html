@@ -126,7 +126,7 @@
           <div class="role-and-sync-row">
             <span id="access-role-tag" class="role-badge role-owner">👑 Pemilik</span>
             <div id="sheets-sync-status-badge" class="sheets-sync-badge-pill disconnected"
-              onclick="openGoogleSheetsModal()" title="Status Sinkronisasi Google Sheets">
+              title="Pemberitahuan Status Sinkronisasi Google Sheets">
               <span class="sheets-live-dot"></span>
               <span id="sheets-sync-status-text">Sheets Belum Konek</span>
             </div>
@@ -657,9 +657,9 @@
         <div class="modal-header-title-row">
           <span class="gsheets-header-icon">📊</span>
           <div>
-            <h3 id="gsheets-modal-title">Google Spreadsheet & Pusat Data</h3>
-            <span class="modal-header-sub" id="gsheets-modal-user-subtitle">Koneksi auto-sync real-time & pusat unduh
-              mutasi</span>
+            <h3 id="gsheets-modal-title">Koneksi &amp; Sinkronisasi Google Sheets</h3>
+            <span class="modal-header-sub" id="gsheets-modal-user-subtitle">Hubungkan webhook Google Apps Script untuk
+              auto-sync mutasi real-time</span>
           </div>
         </div>
         <button class="modal-close" onclick="closeModal('modal-sheets')">&times;</button>
@@ -730,59 +730,6 @@
               💾 Simpan & Sambungkan Webhook
             </button>
           </form>
-        </div>
-
-        <!-- Pusat Unduh & Ekspor Laporan Keuangan (4 Menu Lengkap) -->
-        <div class="settings-block" style="margin-top: 14px;">
-          <h4 class="settings-block-title" style="margin-bottom: 8px;">📥 Pusat Unduh &amp; Ekspor Data (4 Format)</h4>
-          <div class="download-options-list">
-            <!-- 1. Unduh E-Statement (PDF Bank) -->
-            <button type="button" class="download-option-card" onclick="exportPersonalPdf();"
-              title="Unduh Rekening Koran PDF">
-              <div class="download-opt-icon bg-pdf">📄</div>
-              <div class="download-opt-info">
-                <span class="download-opt-title">Unduh E-Statement (PDF Bank)</span>
-                <span class="download-opt-desc">Laporan mutasi rekening koran resmi standar perbankan (A4 rapi).</span>
-              </div>
-              <span class="download-opt-arrow">➔</span>
-            </button>
-
-            <!-- 2. Unduh Mutasi Bank (Format CSV / Excel) -->
-            <button type="button" class="download-option-card" onclick="exportPersonalCsv();"
-              title="Unduh Format CSV / Excel">
-              <div class="download-opt-icon bg-csv">📥</div>
-              <div class="download-opt-info">
-                <span class="download-opt-title">Unduh Mutasi Bank (Format CSV / Excel)</span>
-                <span class="download-opt-desc">File tabel transaksi lengkap, langsung terbuka di HP atau
-                  spreadsheet.</span>
-              </div>
-              <span class="download-opt-arrow">➔</span>
-            </button>
-
-            <!-- 3. Salin Data (1-Klik Siap Paste di Sheets) -->
-            <button type="button" class="download-option-card" onclick="copyTableForGoogleSheets();"
-              title="Salin Data ke Clipboard">
-              <div class="download-opt-icon bg-copy">📋</div>
-              <div class="download-opt-info">
-                <span class="download-opt-title">Salin Data (1-Klik Siap Paste di Sheets)</span>
-                <span class="download-opt-desc">Salin semua mutasi ke clipboard, tinggal buka Sheets lalu tempel di
-                  kotak A1.</span>
-              </div>
-              <span class="download-opt-arrow">➔</span>
-            </button>
-
-            <!-- 4. Buka Google Spreadsheet -->
-            <button type="button" class="download-option-card" onclick="handleAutoSheetOpen(event);"
-              title="Buka Spreadsheet">
-              <div class="download-opt-icon bg-sheets">↗️</div>
-              <div class="download-opt-info">
-                <span class="download-opt-title">Buka Google Spreadsheet</span>
-                <span class="download-opt-desc">Buka dokumen Google Spreadsheet mutasi Anda langsung di browser atau
-                  aplikasi.</span>
-              </div>
-              <span class="download-opt-arrow">➔</span>
-            </button>
-          </div>
         </div>
 
         <!-- Panduan & Script Gratis Google Apps Script -->

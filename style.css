@@ -2912,7 +2912,8 @@ body {
   border-radius: 12px;
   font-size: 0.65rem;
   font-weight: 700;
-  cursor: pointer;
+  cursor: default;
+  user-select: none;
   transition: all 0.2s ease;
   backdrop-filter: blur(8px);
 }
