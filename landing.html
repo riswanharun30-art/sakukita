@@ -298,133 +298,439 @@
     }
 
     .phone-device {
-      width: 320px;
-      background: #0f172a;
-      border: 10px solid #1e293b;
-      border-radius: 44px;
-      padding: 18px 14px 24px;
-      box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.8), 0 0 40px rgba(59, 130, 246, 0.25);
+      width: 326px;
+      background: #090d16;
+      border: 9px solid #1e293b;
+      border-radius: 42px;
+      padding: 12px 12px 14px;
+      box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.8), 0 0 35px rgba(59, 130, 246, 0.25);
       position: relative;
+      display: flex;
+      flex-direction: column;
+      gap: 9px;
+      overflow: hidden;
     }
 
-    .phone-speaker {
-      width: 70px;
-      height: 5px;
-      background: #334155;
-      border-radius: 10px;
-      margin: 0 auto 16px;
-    }
-
-    .mockup-header {
+    .phone-notch-row {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      margin-bottom: 16px;
-      padding-bottom: 12px;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      padding: 0 8px 2px;
+      font-size: 0.65rem;
+      color: #94a3b8;
+      font-weight: 600;
     }
 
-    .mockup-brand {
+    .phone-dynamic-island {
+      width: 64px;
+      height: 5px;
+      background: #334155;
+      border-radius: 99px;
+    }
+
+    /* Mockup Top App Bar */
+    .mockup-app-header {
       display: flex;
       align-items: center;
-      gap: 8px;
+      justify-content: space-between;
+      padding: 2px 2px 4px;
     }
 
-    .mockup-brand img {
+    .mockup-user-info {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .mockup-user-avatar {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.95rem;
+      border: 1.5px solid rgba(255, 255, 255, 0.15);
+    }
+
+    .mockup-user-text {
+      display: flex;
+      flex-direction: column;
+      text-align: left;
+    }
+
+    .mockup-greeting-sub {
+      font-size: 0.58rem;
+      color: #94a3b8;
+      line-height: 1;
+    }
+
+    .mockup-user-name {
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: #ffffff;
+      line-height: 1.2;
+    }
+
+    .mockup-header-badges {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .mockup-google-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      padding: 3px 7px;
+      border-radius: 99px;
+      font-size: 0.62rem;
+      font-weight: 600;
+      color: #e2e8f0;
+    }
+
+    .mockup-icon-btn {
       width: 26px;
       height: 26px;
-      border-radius: 6px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.06);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+      color: #94a3b8;
     }
 
-    .mockup-brand span {
-      font-size: 0.95rem;
-      font-weight: 800;
-      color: #fff;
+    /* Mockup Space Capsule */
+    .mockup-space-capsule {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: rgba(30, 41, 59, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 10px;
+      padding: 4px 8px;
+      font-size: 0.66rem;
+    }
+
+    .mockup-space-left {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      color: #e2e8f0;
+      font-weight: 600;
+    }
+
+    .mockup-space-right {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      padding: 2px 6px;
+      border-radius: 6px;
+      color: #34d399;
+      font-size: 0.58rem;
+      font-weight: 700;
+    }
+
+    /* Mockup Balance Card */
+    .mockup-card-balance {
+      background: linear-gradient(135deg, #1e3a8a 0%, #0f172a 100%);
+      border: 1px solid rgba(59, 130, 246, 0.35);
+      border-radius: 14px;
+      padding: 11px 12px 10px;
+      text-align: left;
+      box-shadow: 0 4px 16px rgba(30, 58, 138, 0.3);
+    }
+
+    .mockup-balance-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 2px;
+    }
+
+    .mockup-caption {
+      font-size: 0.64rem;
+      color: #93c5fd;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 4px;
     }
 
     .mockup-role-pill {
-      font-size: 0.65rem;
-      padding: 3px 8px;
-      background: rgba(16, 185, 129, 0.15);
-      color: #34d399;
+      font-size: 0.58rem;
+      padding: 2px 6px;
+      background: rgba(234, 179, 8, 0.18);
+      color: #facc15;
+      border: 1px solid rgba(234, 179, 8, 0.3);
       border-radius: 6px;
       font-weight: 700;
     }
 
-    .mockup-card-balance {
-      background: linear-gradient(135deg, rgba(30, 41, 59, 0.8) 0%, rgba(15, 23, 42, 0.9) 100%);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      border-radius: 16px;
-      padding: 16px;
-      margin-bottom: 14px;
-      text-align: left;
-    }
-
-    .mockup-caption {
-      font-size: 0.7rem;
-      color: var(--text-muted);
-    }
-
     .mockup-balance {
-      font-size: 1.5rem;
+      font-size: 1.35rem;
       font-weight: 800;
-      color: #fff;
-      margin: 4px 0 10px;
+      color: #ffffff;
+      margin: 2px 0 7px;
+      letter-spacing: -0.3px;
     }
 
     .mockup-stats-row {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 8px;
+      gap: 6px;
     }
 
     .mockup-stat {
-      background: rgba(0, 0, 0, 0.2);
-      padding: 6px 8px;
-      border-radius: 8px;
-      font-size: 0.68rem;
+      background: rgba(0, 0, 0, 0.25);
+      padding: 4px 6px;
+      border-radius: 6px;
+      display: flex;
+      flex-direction: column;
     }
 
-    .mockup-stat.inc { color: #34d399; }
-    .mockup-stat.exp { color: #f87171; }
+    .mockup-stat-label {
+      font-size: 0.52rem;
+      color: #94a3b8;
+      text-transform: uppercase;
+      font-weight: 600;
+    }
 
-    .mockup-empty-card {
-      background: rgba(255, 255, 255, 0.03);
-      border: 1px dashed rgba(255, 255, 255, 0.12);
-      border-radius: 14px;
-      padding: 20px 12px;
+    .mockup-stat.inc { color: #34d399; font-weight: 700; font-size: 0.62rem; }
+    .mockup-stat.exp { color: #f87171; font-weight: 700; font-size: 0.62rem; }
+
+    /* Mockup Quick Actions */
+    .mockup-quick-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 6px;
       text-align: center;
-      margin-top: 14px;
+      padding: 1px 0;
     }
 
-    .mockup-empty-card .icon {
-      font-size: 1.6rem;
-      margin-bottom: 6px;
+    .mockup-quick-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
     }
 
-    .mockup-empty-card h5 {
-      font-size: 0.8rem;
+    .mockup-action-circle {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.92rem;
+      box-shadow: 0 3px 8px rgba(0, 0, 0, 0.3);
+      position: relative;
+    }
+
+    .mockup-action-circle.blue {
+      background: linear-gradient(135deg, #3b82f6, #2563eb);
+    }
+    .mockup-action-circle.green {
+      background: linear-gradient(135deg, #10b981, #059669);
+    }
+    .mockup-action-circle.orange {
+      background: linear-gradient(135deg, #f59e0b, #d97706);
+    }
+    .mockup-action-circle.purple {
+      background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+    }
+
+    .mockup-action-dot {
+      position: absolute;
+      top: 1px;
+      right: 1px;
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #10b981;
+      border: 1.5px solid #090d16;
+    }
+
+    .mockup-quick-label {
+      font-size: 0.58rem;
       font-weight: 700;
-      color: #f1f5f9;
+      color: #cbd5e1;
+    }
+
+    /* Mockup Wallets Slider */
+    .mockup-wallets-box {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 9px;
+      padding: 6px 8px;
+      text-align: left;
+    }
+
+    .mockup-section-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 0.58rem;
+      font-weight: 700;
+      color: #94a3b8;
       margin-bottom: 4px;
     }
 
-    .mockup-empty-card p {
-      font-size: 0.68rem;
-      color: #94a3b8;
-      line-height: 1.4;
-      margin-bottom: 10px;
+    .mockup-section-action {
+      color: #60a5fa;
+      font-size: 0.54rem;
     }
 
-    .mockup-btn-add {
-      background: #3b82f6;
-      color: #fff;
-      border: none;
-      padding: 6px 14px;
-      border-radius: 8px;
-      font-size: 0.7rem;
+    .mockup-wallets-list {
+      display: flex;
+      gap: 5px;
+      overflow: hidden;
+    }
+
+    .mockup-wallet-pill {
+      flex: 1;
+      background: rgba(30, 41, 59, 0.7);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 6px;
+      padding: 3px 5px;
+      font-size: 0.52rem;
+      white-space: nowrap;
+    }
+
+    .mockup-wallet-pill strong {
+      display: block;
+      color: #ffffff;
+      font-size: 0.6rem;
+    }
+
+    .mockup-wallet-pill span {
+      color: #94a3b8;
+    }
+
+    /* Mockup Transactions List */
+    .mockup-tx-box {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 9px;
+      padding: 6px 8px;
+      text-align: left;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .mockup-tx-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 2px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    }
+
+    .mockup-tx-item:last-child {
+      border-bottom: none;
+    }
+
+    .mockup-tx-left {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .mockup-tx-icon {
+      width: 20px;
+      height: 20px;
+      border-radius: 5px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.68rem;
+    }
+
+    .mockup-tx-icon.income {
+      background: rgba(16, 185, 129, 0.15);
+      color: #34d399;
+    }
+
+    .mockup-tx-icon.expense {
+      background: rgba(239, 68, 68, 0.15);
+      color: #f87171;
+    }
+
+    .mockup-tx-details {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .mockup-tx-title {
+      font-size: 0.6rem;
       font-weight: 700;
-      cursor: pointer;
+      color: #f1f5f9;
+      line-height: 1.1;
+    }
+
+    .mockup-tx-sub {
+      font-size: 0.48rem;
+      color: #64748b;
+    }
+
+    .mockup-tx-amount {
+      font-size: 0.62rem;
+      font-weight: 800;
+    }
+
+    .mockup-tx-amount.income { color: #34d399; }
+    .mockup-tx-amount.expense { color: #f87171; }
+
+    /* Mockup Bottom Navigation */
+    .mockup-bottom-nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-around;
+      background: rgba(15, 23, 42, 0.95);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 10px;
+      padding: 4px 4px;
+      margin-top: 1px;
+    }
+
+    .mockup-nav-icon {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1px;
+      font-size: 0.68rem;
+      color: #64748b;
+    }
+
+    .mockup-nav-icon.active {
+      color: #3b82f6;
+    }
+
+    .mockup-nav-label {
+      font-size: 0.46rem;
+      font-weight: 600;
+    }
+
+    .mockup-nav-fab {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-size: 0.85rem;
+      margin-top: -10px;
+      box-shadow: 0 4px 10px rgba(37, 99, 235, 0.5);
+      border: 1.5px solid #090d16;
     }
 
     /* Floating highlight badges */
@@ -1049,40 +1355,180 @@
         </div>
       </div>
 
-      <!-- Phone Mockup Frame -->
+      <!-- Phone Mockup Frame - Modern FinTech SakuKita -->
       <div class="hero-right phone-mockup-wrapper">
         <div class="badge-float top-right">
-          <span>🔒 Hak Pantau Read-Only</span>
+          <span>🤝 Izin Pantau (Read-Only)</span>
         </div>
         <div class="badge-float bottom-left">
           <span>📑 E-Statement PDF Bank</span>
         </div>
 
         <div class="phone-device">
-          <div class="phone-speaker"></div>
-          
-          <div class="mockup-header">
-            <div class="mockup-brand">
-              <img src="icon-192.png" alt="SakuKita">
-              <span>SakuKita</span>
-            </div>
-            <span class="mockup-role-pill">👑 Pemilik Akun</span>
+          <!-- Dynamic Notch Row -->
+          <div class="phone-notch-row">
+            <span>09:41</span>
+            <div class="phone-dynamic-island"></div>
+            <span>📶 🔋</span>
           </div>
 
+          <!-- Top App Bar -->
+          <div class="mockup-app-header">
+            <div class="mockup-user-info">
+              <div class="mockup-user-avatar">👨‍💼</div>
+              <div class="mockup-user-text">
+                <span class="mockup-greeting-sub">Halo, Selamat Datang 👋</span>
+                <span class="mockup-user-name">Mas Harun</span>
+              </div>
+            </div>
+            <div class="mockup-header-badges">
+              <div class="mockup-google-pill">
+                <svg width="10" height="10" viewBox="0 0 24 24">
+                  <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                  <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
+                  <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
+                </svg>
+                <span>Google</span>
+              </div>
+              <div class="mockup-icon-btn">⚙️</div>
+            </div>
+          </div>
+
+          <!-- Space Selector Capsule -->
+          <div class="mockup-space-capsule">
+            <div class="mockup-space-left">
+              <span>📘</span>
+              <span>Buku Kas Utama</span>
+              <span style="font-size: 0.5rem; color:#94a3b8;">▼</span>
+            </div>
+            <div class="mockup-space-right">
+              <span>🤝</span>
+              <span>Izin Pantau</span>
+            </div>
+          </div>
+
+          <!-- FinTech DANA / OVO Style Gradient Balance Card -->
           <div class="mockup-card-balance">
-            <span class="mockup-caption">Total Saldo Bersih</span>
-            <div class="mockup-balance">Rp 0</div>
+            <div class="mockup-balance-top">
+              <span class="mockup-caption">👁️ Total Saldo Kas Tersedia</span>
+              <span class="mockup-role-pill">👑 Pemilik</span>
+            </div>
+            <div class="mockup-balance">Rp 14.850.000</div>
             <div class="mockup-stats-row">
-              <div class="mockup-stat inc">Pemasukan: +Rp 0</div>
-              <div class="mockup-stat exp">Pengeluaran: -Rp 0</div>
+              <div class="mockup-stat inc">
+                <span class="mockup-stat-label">Pemasukan</span>
+                <span>+Rp 18.500.000</span>
+              </div>
+              <div class="mockup-stat exp">
+                <span class="mockup-stat-label">Pengeluaran</span>
+                <span>-Rp 3.650.000</span>
+              </div>
             </div>
           </div>
 
-          <div class="mockup-empty-card">
-            <div class="icon">✨</div>
-            <h5>Buku Kas Bersih dari Nol</h5>
-            <p>Belum ada data contoh fiktif. Rekam pemasukan & pengeluaran pertama Anda sekarang.</p>
-            <a href="index.html" class="mockup-btn-add" style="text-decoration:none; display:inline-block;">+ Catat Transaksi</a>
+          <!-- 4 Quick Actions (Catat, Keluarga, Unduh, Sinkron) -->
+          <div class="mockup-quick-grid">
+            <div class="mockup-quick-item">
+              <div class="mockup-action-circle blue">➕</div>
+              <span class="mockup-quick-label">Catat</span>
+            </div>
+            <div class="mockup-quick-item">
+              <div class="mockup-action-circle green">🤝</div>
+              <span class="mockup-quick-label">Keluarga</span>
+            </div>
+            <div class="mockup-quick-item">
+              <div class="mockup-action-circle orange">📥</div>
+              <span class="mockup-quick-label">Unduh</span>
+            </div>
+            <div class="mockup-quick-item">
+              <div class="mockup-action-circle purple">
+                📊
+                <div class="mockup-action-dot"></div>
+              </div>
+              <span class="mockup-quick-label">Sinkron</span>
+            </div>
+          </div>
+
+          <!-- Kantong / Dompet Mini Slider -->
+          <div class="mockup-wallets-box">
+            <div class="mockup-section-head">
+              <span>💳 Kantong &amp; Dompet</span>
+              <span class="mockup-section-action">+ Tambah</span>
+            </div>
+            <div class="mockup-wallets-list">
+              <div class="mockup-wallet-pill">
+                <span>BCA</span>
+                <strong>Rp 10.5jt</strong>
+              </div>
+              <div class="mockup-wallet-pill">
+                <span>Gopay</span>
+                <strong>Rp 1.85jt</strong>
+              </div>
+              <div class="mockup-wallet-pill">
+                <span>Tabungan</span>
+                <strong>Rp 2.5jt</strong>
+              </div>
+            </div>
+          </div>
+
+          <!-- Riwayat Mutasi Transaksi Realtime -->
+          <div class="mockup-tx-box">
+            <div class="mockup-section-head">
+              <span>📋 Mutasi Terkini</span>
+              <span class="mockup-section-action">Lihat Semua ›</span>
+            </div>
+            <div class="mockup-tx-item">
+              <div class="mockup-tx-left">
+                <div class="mockup-tx-icon income">💼</div>
+                <div class="mockup-tx-details">
+                  <span class="mockup-tx-title">Gaji &amp; Bonus Masuk</span>
+                  <span class="mockup-tx-sub">Hari ini • Rek Mandiri</span>
+                </div>
+              </div>
+              <span class="mockup-tx-amount income">+Rp 8.500.000</span>
+            </div>
+            <div class="mockup-tx-item">
+              <div class="mockup-tx-left">
+                <div class="mockup-tx-icon expense">🛒</div>
+                <div class="mockup-tx-details">
+                  <span class="mockup-tx-title">Belanja Bulanan</span>
+                  <span class="mockup-tx-sub">Kemarin • Dompet BCA</span>
+                </div>
+              </div>
+              <span class="mockup-tx-amount expense">-Rp 450.000</span>
+            </div>
+            <div class="mockup-tx-item">
+              <div class="mockup-tx-left">
+                <div class="mockup-tx-icon expense">⚡</div>
+                <div class="mockup-tx-details">
+                  <span class="mockup-tx-title">Listrik &amp; WiFi Rumah</span>
+                  <span class="mockup-tx-sub">24 Okt • Dompet Harian</span>
+                </div>
+              </div>
+              <span class="mockup-tx-amount expense">-Rp 350.000</span>
+            </div>
+          </div>
+
+          <!-- Bottom Navigation Bar -->
+          <div class="mockup-bottom-nav">
+            <div class="mockup-nav-icon active">
+              <span>📊</span>
+              <span class="mockup-nav-label">Catat</span>
+            </div>
+            <div class="mockup-nav-icon">
+              <span>💳</span>
+              <span class="mockup-nav-label">Dompet</span>
+            </div>
+            <div class="mockup-nav-fab">➕</div>
+            <div class="mockup-nav-icon">
+              <span>🤝</span>
+              <span class="mockup-nav-label">Keluarga</span>
+            </div>
+            <div class="mockup-nav-icon">
+              <span>⚙️</span>
+              <span class="mockup-nav-label">Akun</span>
+            </div>
           </div>
         </div>
       </div>

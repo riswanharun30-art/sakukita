@@ -398,6 +398,8 @@ document.addEventListener('DOMContentLoaded', () => {
   checkAndProcessMonthlyAdminFees();
 
   setupRealtimeListeners();
+  processUrlJoinSpaceParam();
+  setupCloudSyncLoop();
 
   // If not logged in or active user email is empty: Show Google Login
   const currentUser = getActiveUser();
@@ -462,6 +464,12 @@ function saveUsers() {
 
 function saveSpaces() {
   localStorage.setItem('sakukita_spaces_v6', JSON.stringify(spaces));
+  try {
+    const currentSpace = getActiveSpace();
+    if (currentSpace && isOwnerOfCurrentSpace()) {
+      broadcastSpaceToCloud(currentSpace);
+    }
+  } catch (e) {}
 }
 
 // Zero-Data Reset & Demo Simulation Handlers
@@ -753,13 +761,23 @@ function testGoogleSheetsWebhook() {
   }
 }
 
-// Permission & Space Access Verification (Viewer vs Owner)
 function getAccessibleSpacesForUser(userId) {
+  const currentUser = users[userId];
+  const userEmail = currentUser && currentUser.email ? currentUser.email.toLowerCase() : '';
+
   return Object.values(spaces).filter(space => {
     // Owner can access
     if (space.ownerId === userId) return true;
-    // Allowed viewers can access
+    // Allowed viewers can access by ID
     if (space.allowedViewers && space.allowedViewers.includes(userId)) return true;
+    // Allowed viewers can access by matching email across devices
+    if (userEmail && space.allowedViewers) {
+      const matchEmail = space.allowedViewers.some(vid => {
+        const u = users[vid];
+        return u && u.email && u.email.toLowerCase() === userEmail;
+      });
+      if (matchEmail) return true;
+    }
     return false;
   });
 }
@@ -2385,7 +2403,7 @@ function openCollabModal() {
         <div class="collab-empty-box">
           <div class="collab-empty-icon">👥</div>
           <strong class="collab-empty-title">Belum Ada Anggota Keluarga</strong>
-          <p class="collab-empty-desc">Buku kas ini masih bersifat pribadi. Gunakan formulir di bawah untuk menambahkan email Google anggota keluarga (istri, suami, anak, atau rekan) agar mereka dapat memantau keuangan Anda.</p>
+          <p class="collab-empty-desc">Buku kas ini masih bersifat pribadi. Masukkan email Google pasangan di bawah, lalu bagikan tautan instan via WhatsApp agar pasangan langsung terhubung di HP-nya.</p>
         </div>
       `;
     } else {
@@ -2412,6 +2430,14 @@ function openCollabModal() {
               </button>
             </div>
           </div>
+          <div class="member-share-invite-row">
+            <button type="button" class="btn-share-invite-wa" onclick="shareCollabInviteWhatsApp('${escapeHtml(u.email)}', '${escapeHtml(u.name)}')">
+              <span>🟢 Kirim Undangan WhatsApp</span>
+            </button>
+            <button type="button" class="btn-copy-invite-link" onclick="copyCollabInviteLink('${escapeHtml(u.email)}', '${escapeHtml(u.name)}')">
+              <span>🔗 Salin Tautan</span>
+            </button>
+          </div>
         `;
       });
       membersHtml += '</div>';
@@ -2435,16 +2461,26 @@ function openCollabModal() {
           <form id="form-add-collab" onsubmit="handleAddCollabMember(event)">
             <div class="form-group" style="margin-bottom:8px;">
               <label for="collab-member-email">Email Google (Gmail) Anggota:</label>
-              <input type="email" id="collab-member-email" class="form-control" placeholder="contoh: istri@gmail.com" required>
+              <input type="email" id="collab-member-email" class="form-control" placeholder="contoh: pasangan@gmail.com" required>
             </div>
             <div class="form-group" style="margin-bottom:10px;">
               <label for="collab-member-name">Nama Panggilan / Peran:</label>
-              <input type="text" id="collab-member-name" class="form-control" placeholder="Contoh: Istri / Bunda / Adik" required>
+              <input type="text" id="collab-member-name" class="form-control" placeholder="Contoh: Istri / Suami / Bunda" required>
             </div>
             <button type="submit" class="btn-submit-tx" style="margin-top:0; padding:10px;">
-              <span>+ Berikan Izin Pantau</span>
+              <span>+ Berikan Izin &amp; Sambungkan Cloud</span>
             </button>
           </form>
+        </div>
+
+        <div class="collab-sync-status-box" style="margin-top:14px;">
+          <div class="collab-sync-status-info">
+            <span class="gsheets-status-dot" style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#10b981; box-shadow:0 0 6px #10b981;"></span>
+            <span>Sinkronisasi Cloud Antar-HP Aktif</span>
+          </div>
+          <button type="button" class="btn-manual-cloud-check" onclick="manualCheckInvitesNow()">
+            🔍 Cari Undangan Masuk
+          </button>
         </div>
       </div>
 
@@ -2462,11 +2498,21 @@ function openCollabModal() {
           <span class="collab-badge badge-shared">Izin Pantau Aktif</span>
         </div>
         <p class="collab-desc">
-          Buku kas ini dibuat dan dimiliki oleh <b>${escapeHtml(ownerUser.name)}</b> (${escapeHtml(ownerUser.email)}).
+          Buku kas ini dibuat dan dimiliki oleh <b>${escapeHtml(ownerUser.name)}</b> (${escapeHtml(ownerUser.email || 'Email Pasangan')}).
         </p>
         <div class="collab-notice-box">
           <strong>👁️ Status Hak Akses Anda: Pemantau (Viewer)</strong>
           Anda diizinkan memantau seluruh mutasi dan saldo buku kas ini secara realtime. Untuk menjaga integritas data, hanya <b>${escapeHtml(ownerUser.name)}</b> yang memiliki wewenang untuk menambah atau merubah transaksi.
+        </div>
+
+        <div class="collab-sync-status-box" style="margin-top:14px;">
+          <div class="collab-sync-status-info">
+            <span class="gsheets-status-dot" style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#10b981; box-shadow:0 0 6px #10b981;"></span>
+            <span>Terhubung ke Cloud Pasangan</span>
+          </div>
+          <button type="button" class="btn-manual-cloud-check" onclick="manualSyncPartnerSpace('${currentSpace.id}')">
+            🔄 Sinkronkan Sekarang
+          </button>
         </div>
       </div>
     `;
@@ -2475,7 +2521,7 @@ function openCollabModal() {
   document.getElementById('modal-collaboration').classList.remove('hidden');
 }
 
-function handleAddCollabMember(e) {
+async function handleAddCollabMember(e) {
   e.preventDefault();
   const emailInput = document.getElementById('collab-member-email');
   const nameInput = document.getElementById('collab-member-name');
@@ -2516,12 +2562,16 @@ function handleAddCollabMember(e) {
   saveUsers();
   saveSpaces();
 
+  // Send cloud invite & broadcast space data
+  publishCloudInvitation(currentSpace, email, name);
+  broadcastSpaceToCloud(currentSpace);
+
   emailInput.value = '';
   nameInput.value = '';
 
   openCollabModal();
   renderAll();
-  showLiveToast('👥 Izin Diberikan', `${name} (${email}) dapat memantau buku kas ini.`);
+  showLiveToast('👥 Izin Diberikan & Terkirim!', `${name} (${email}) telah ditambahkan. Kirim link via WhatsApp agar langsung terhubung.`);
   notifyOtherTabs('PERMISSION_CHANGED', { spaceId: currentSpace.id, targetUserId: memberUser.id });
 }
 
@@ -2534,6 +2584,7 @@ function handleRemoveCollabMember(targetUserId) {
       currentSpace.allowedViewers = currentSpace.allowedViewers.filter(id => id !== targetUserId);
     }
     saveSpaces();
+    broadcastSpaceToCloud(currentSpace);
     openCollabModal();
     renderAll();
     showLiveToast('🚫 Izin Dicabut', `Akses pantau untuk ${targetUser.name} telah dicabut.`);
@@ -2815,6 +2866,7 @@ function loginWithSavedGoogleAccount(email, name) {
   closeModal('modal-google-login');
   showLiveToast('🎉 Berhasil Masuk', `Selamat datang kembali, ${getActiveUser().name}!`);
   notifyOtherTabs('USER_SWITCHED', { userId: activeUserId });
+  checkPendingCloudInvites();
 }
 
 function triggerGoogleOneTapLogin() {
@@ -2936,6 +2988,7 @@ function handleAddNewGoogleAccount(e) {
   closeModal('modal-google-login');
   showLiveToast('🎉 Berhasil Masuk', `Selamat datang, ${getActiveUser().name}!`);
   notifyOtherTabs('USER_SWITCHED', { userId: activeUserId });
+  checkPendingCloudInvites();
 }
 
 function handleGoogleLogout() {
@@ -3153,3 +3206,373 @@ function copyAppsScriptCode() {
     fallbackCopy(code, copyDone);
   }
 }
+
+// ==========================================================================
+// Cross-Device Remote Collaboration & Cloud Sync Engine (ntfy.sh Relay)
+// ==========================================================================
+function getSyncHash(str) {
+  let hash = 0;
+  const s = (str || '').trim().toLowerCase();
+  for (let i = 0; i < s.length; i++) {
+    const char = s.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash |= 0;
+  }
+  return Math.abs(hash).toString(36);
+}
+
+function getSyncTopicForEmail(email) {
+  if (!email) return null;
+  return 'sakukita_u_' + getSyncHash(email);
+}
+
+function getSyncTopicForSpace(spaceId) {
+  if (!spaceId) return null;
+  return 'sakukita_sp_' + spaceId.replace(/[^a-zA-Z0-9_-]/g, '_');
+}
+
+async function broadcastSpaceToCloud(space) {
+  if (!space || !space.id) return;
+  if (!space.allowedViewers || space.allowedViewers.length === 0) return;
+  const topic = getSyncTopicForSpace(space.id);
+  const ownerUser = users[space.ownerId] || { name: 'Pemilik', email: '' };
+
+  const payload = {
+    action: 'SPACE_UPDATE',
+    timestamp: Date.now(),
+    space: {
+      id: space.id,
+      name: space.name,
+      ownerId: space.ownerId,
+      ownerEmail: ownerUser.email,
+      ownerName: ownerUser.name,
+      icon: space.icon,
+      isDefault: space.isDefault,
+      budget: space.budget || 0,
+      allowedViewers: space.allowedViewers,
+      wallets: space.wallets,
+      transactions: space.transactions
+    }
+  };
+
+  try {
+    fetch(`https://ntfy.sh/${topic}`, {
+      method: 'POST',
+      headers: { 'Title': 'SakuKita Space Update', 'Priority': 'low' },
+      body: JSON.stringify(payload)
+    }).catch(() => {});
+  } catch (e) {}
+}
+
+async function publishCloudInvitation(space, targetEmail, targetName) {
+  if (!space || !targetEmail) return;
+  const topic = getSyncTopicForEmail(targetEmail);
+  const ownerUser = users[space.ownerId] || { name: 'Pemilik', email: '' };
+
+  const payload = {
+    action: 'SPACE_INVITE',
+    timestamp: Date.now(),
+    targetEmail: targetEmail.toLowerCase(),
+    targetName: targetName,
+    space: {
+      id: space.id,
+      name: space.name,
+      ownerId: space.ownerId,
+      ownerEmail: ownerUser.email,
+      ownerName: ownerUser.name,
+      icon: space.icon,
+      allowedViewers: space.allowedViewers,
+      wallets: space.wallets,
+      transactions: space.transactions
+    }
+  };
+
+  try {
+    fetch(`https://ntfy.sh/${topic}`, {
+      method: 'POST',
+      headers: { 'Title': `Undangan Pantau SakuKita dari ${ownerUser.name}`, 'Priority': 'default' },
+      body: JSON.stringify(payload)
+    }).catch(() => {});
+  } catch (e) {}
+}
+
+function generateCollabInviteUrl(memberEmail, memberName) {
+  const currentSpace = getActiveSpace();
+  const ownerUser = users[currentSpace.ownerId] || { name: 'Pasangan', email: '' };
+  const inviteData = {
+    spaceId: currentSpace.id,
+    spaceName: currentSpace.name,
+    spaceIcon: currentSpace.icon || '📘',
+    ownerId: currentSpace.ownerId,
+    ownerName: ownerUser.name,
+    ownerEmail: ownerUser.email,
+    targetEmail: memberEmail ? memberEmail.toLowerCase() : '',
+    targetName: memberName || '',
+    allowedViewers: currentSpace.allowedViewers || [],
+    wallets: currentSpace.wallets || [],
+    transactions: currentSpace.transactions || []
+  };
+
+  let jsonStr = JSON.stringify(inviteData);
+  let base64Token = '';
+  try {
+    base64Token = btoa(encodeURIComponent(jsonStr).replace(/%([0-9A-F]{2})/g, function(match, p1) {
+      return String.fromCharCode('0x' + p1);
+    }));
+  } catch (e) {
+    base64Token = btoa(unescape(encodeURIComponent(jsonStr)));
+  }
+
+  const baseUrl = 'https://riswanharun30-art.github.io/sakukita/index.html';
+  return `${baseUrl}?join_space=${encodeURIComponent(base64Token)}`;
+}
+
+function shareCollabInviteWhatsApp(memberEmail, memberName) {
+  const link = generateCollabInviteUrl(memberEmail, memberName);
+  const currentSpace = getActiveSpace();
+  const ownerUser = users[currentSpace.ownerId] || { name: 'Saya' };
+  const text = `Halo ${memberName || ''}! Saya mengundangmu untuk memantau Buku Kas Keuangan "${currentSpace.name}" di SakuKita.\n\nKlik tautan ini di HP-mu untuk langsung terhubung:\n${link}\n\n(Akses bersifat Hak Pantau / Read-Only)`;
+  const waUrl = `https://wa.me/?text=${encodeURIComponent(text)}`;
+  window.open(waUrl, '_blank');
+}
+
+function copyCollabInviteLink(memberEmail, memberName) {
+  const link = generateCollabInviteUrl(memberEmail, memberName);
+  const copyDone = () => {
+    if (navigator.vibrate) navigator.vibrate([40]);
+    showLiveToast('📋 Tautan Undangan Disalin!', 'Kirimkan tautan ini ke pasangan Anda via WhatsApp / Chat.');
+  };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(link).then(copyDone).catch(() => fallbackCopy(link, copyDone));
+  } else {
+    fallbackCopy(link, copyDone);
+  }
+}
+
+function processUrlJoinSpaceParam() {
+  const urlParams = new URLSearchParams(window.location.search);
+  const joinToken = urlParams.get('join_space');
+  if (!joinToken) return;
+
+  try {
+    let jsonStr = '';
+    try {
+      jsonStr = decodeURIComponent(Array.prototype.map.call(atob(decodeURIComponent(joinToken)), function(c) {
+        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+      }).join(''));
+    } catch (e) {
+      jsonStr = decodeURIComponent(escape(atob(decodeURIComponent(joinToken))));
+    }
+    const data = JSON.parse(jsonStr);
+
+    if (data && data.spaceId) {
+      applyRemoteSpaceJoin(data, 'tautan WhatsApp');
+      const cleanUrl = window.location.origin + window.location.pathname;
+      window.history.replaceState({}, document.title, cleanUrl);
+    }
+  } catch (err) {
+    console.error('Failed to parse join_space token:', err);
+  }
+}
+
+function applyRemoteSpaceJoin(data, sourceLabel) {
+  const spaceObj = data.space || data;
+  const incomingSpaceId = data.spaceId || spaceObj.id;
+  if (!incomingSpaceId) return;
+
+  const ownerId = spaceObj.ownerId || 'owner_remote';
+  const ownerName = spaceObj.ownerName || 'Pasangan';
+  const ownerEmail = spaceObj.ownerEmail || '';
+
+  if (!users[ownerId]) {
+    users[ownerId] = {
+      id: ownerId,
+      name: ownerName,
+      email: ownerEmail,
+      avatar: '👤',
+      photo: '',
+      color: '#3b82f6',
+      googleSheetUrl: '',
+      webhookUrl: '',
+      autoSyncEnabled: true
+    };
+  } else {
+    if (ownerName && ownerName !== 'Pemilik') users[ownerId].name = ownerName;
+    if (ownerEmail) users[ownerId].email = ownerEmail;
+  }
+
+  let viewers = Array.isArray(spaceObj.allowedViewers) ? [...spaceObj.allowedViewers] : [];
+  if (!viewers.includes(activeUserId)) {
+    viewers.push(activeUserId);
+  }
+
+  if (spaces[incomingSpaceId]) {
+    spaces[incomingSpaceId].name = spaceObj.spaceName || spaceObj.name || spaces[incomingSpaceId].name;
+    spaces[incomingSpaceId].icon = spaceObj.spaceIcon || spaceObj.icon || spaces[incomingSpaceId].icon;
+    spaces[incomingSpaceId].ownerId = ownerId;
+    spaces[incomingSpaceId].allowedViewers = viewers;
+    if (spaceObj.wallets && spaceObj.wallets.length > 0) {
+      spaces[incomingSpaceId].wallets = spaceObj.wallets;
+    }
+    if (spaceObj.transactions) {
+      spaces[incomingSpaceId].transactions = spaceObj.transactions;
+    }
+  } else {
+    spaces[incomingSpaceId] = {
+      id: incomingSpaceId,
+      name: spaceObj.spaceName || spaceObj.name || 'Buku Kas Pasangan',
+      icon: spaceObj.spaceIcon || spaceObj.icon || '📘',
+      ownerId: ownerId,
+      allowedViewers: viewers,
+      budget: spaceObj.budget || 0,
+      wallets: spaceObj.wallets && spaceObj.wallets.length > 0 ? spaceObj.wallets : [
+        { id: 'w-remote-1', name: 'Dompet Utama', balance: 0, color: '#3b82f6' }
+      ],
+      transactions: spaceObj.transactions || []
+    };
+  }
+
+  activeSpaceId = incomingSpaceId;
+  localStorage.setItem('sakukita_active_space_id', incomingSpaceId);
+  saveUsers();
+  saveSpaces();
+
+  validateActiveSpace();
+  renderUserPills();
+  renderActiveUserProfile();
+  updateSpaceSelectorUI();
+  populateCategoryPicker();
+  renderAll();
+
+  showLiveToast(
+    '🎉 Buku Kas Terhubung!',
+    `Berhasil terhubung ke Buku Kas "${spaces[incomingSpaceId].name}" milik ${ownerName} (${sourceLabel || 'Cloud'}).`
+  );
+}
+
+let cloudSyncTimer = null;
+
+async function checkPendingCloudInvites() {
+  const currentUser = getActiveUser();
+  if (!currentUser || !currentUser.email) return;
+
+  const topic = getSyncTopicForEmail(currentUser.email);
+  if (!topic) return;
+
+  try {
+    const res = await fetch(`https://ntfy.sh/${topic}/json?poll=1&since=all`);
+    if (!res.ok) return;
+    const text = await res.text();
+    const lines = text.split('\n');
+    for (const line of lines) {
+      if (!line.trim()) continue;
+      try {
+        const item = JSON.parse(line);
+        if (item.event === 'message' && item.message) {
+          const payload = JSON.parse(item.message);
+          if (payload.action === 'SPACE_INVITE' && payload.space) {
+            applyRemoteSpaceJoin(payload.space, 'Undangan Cloud Otomatis');
+          }
+        }
+      } catch (e) {}
+    }
+  } catch (err) {}
+}
+
+async function pollSpaceFromCloud(spaceId, force = false) {
+  if (!spaceId) return;
+  const currentSpace = spaces[spaceId];
+  if (!currentSpace) return;
+  if (currentSpace.ownerId === activeUserId) return;
+
+  const topic = getSyncTopicForSpace(spaceId);
+  if (!topic) return;
+
+  try {
+    const res = await fetch(`https://ntfy.sh/${topic}/json?poll=1&since=all`);
+    if (!res.ok) return;
+    const text = await res.text();
+    const lines = text.split('\n');
+    let latestUpdate = null;
+    for (const line of lines) {
+      if (!line.trim()) continue;
+      try {
+        const item = JSON.parse(line);
+        if (item.event === 'message' && item.message) {
+          const payload = JSON.parse(item.message);
+          if (payload.action === 'SPACE_UPDATE' && payload.space) {
+            if (!latestUpdate || payload.timestamp > latestUpdate.timestamp) {
+              latestUpdate = payload;
+            }
+          }
+        }
+      } catch (e) {}
+    }
+
+    if (latestUpdate && latestUpdate.space) {
+      const sp = latestUpdate.space;
+      let changed = false;
+      if (JSON.stringify(currentSpace.transactions) !== JSON.stringify(sp.transactions)) {
+        currentSpace.transactions = sp.transactions;
+        changed = true;
+      }
+      if (JSON.stringify(currentSpace.wallets) !== JSON.stringify(sp.wallets)) {
+        currentSpace.wallets = sp.wallets;
+        changed = true;
+      }
+      if (sp.name && sp.name !== currentSpace.name) {
+        currentSpace.name = sp.name;
+        changed = true;
+      }
+      if (changed) {
+        saveSpaces();
+        renderAll();
+        if (force) {
+          showLiveToast('🔄 Data Tersinkron', 'Data buku kas pasangan berhasil diperbarui ke kondisi terkini.');
+        }
+      } else if (force) {
+        showLiveToast('✅ Data Terkini', 'Data buku kas sudah dalam kondisi paling baru.');
+      }
+    } else if (force) {
+      showLiveToast('ℹ️ Data Terkini', 'Belum ada transaksi baru dari pasangan di cloud.');
+    }
+  } catch (err) {
+    if (force) {
+      showLiveToast('⚠️ Offline', 'Gagal menghubungi cloud. Periksa koneksi internet Anda.');
+    }
+  }
+}
+
+function setupCloudSyncLoop() {
+  if (cloudSyncTimer) clearInterval(cloudSyncTimer);
+
+  setTimeout(() => {
+    checkPendingCloudInvites();
+    const currentSpace = getActiveSpace();
+    if (currentSpace && currentSpace.ownerId !== activeUserId) {
+      pollSpaceFromCloud(currentSpace.id);
+    }
+  }, 2000);
+
+  cloudSyncTimer = setInterval(() => {
+    checkPendingCloudInvites();
+    const currentSpace = getActiveSpace();
+    if (currentSpace && currentSpace.ownerId !== activeUserId) {
+      pollSpaceFromCloud(currentSpace.id);
+    }
+  }, 25000);
+}
+
+function manualSyncPartnerSpace(spaceId) {
+  pollSpaceFromCloud(spaceId, true);
+}
+
+function manualCheckInvitesNow() {
+  showLiveToast('🔍 Memeriksa Cloud...', 'Sedang mencari undangan buku kas yang ditujukan ke email Anda.');
+  checkPendingCloudInvites().then(() => {
+    setTimeout(() => {
+      showLiveToast('✅ Pemeriksaan Selesai', 'Jika ada undangan baru, buku kas akan otomatis muncul di menu atas.');
+    }, 1200);
+  });
+}
+
