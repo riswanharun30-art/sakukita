@@ -1,5 +1,5 @@
-// SakuKita Service Worker - Offline Caching & PWA Ready
-const CACHE_NAME = 'sakukita-cache-v30-cloud-purge-stable-switch';
+﻿// SakuKita Service Worker - Offline Caching & PWA Ready
+const CACHE_NAME = 'sakukita-cache-v31-invite-fix';
 const ASSETS = [
   './',
   './index.html',

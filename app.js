@@ -509,10 +509,32 @@ function isSpaceRevoked(spaceId, originalSpaceId, ownerEmail) {
   const cleanEmail = (ownerEmail || '').toLowerCase().trim();
   return list.some(item => {
     if (spaceId && item.spaceId && item.spaceId === spaceId) return true;
+    if (cleanEmail && item.ownerEmail) {
+      // Pemilik dikenali lewat email: cocokkan berdasarkan email saja
+      // (ID bawaan seperti "space_1" sama di semua HP, tidak boleh dipakai sendirian)
+      return item.ownerEmail === cleanEmail;
+    }
     if (originalSpaceId && item.originalSpaceId && item.originalSpaceId === originalSpaceId) return true;
-    if (cleanEmail && item.ownerEmail && item.ownerEmail === cleanEmail) return true;
     return false;
   });
+}
+
+// Hapus blokir lama jika undangan baru dikirim SETELAH pencabutan (re-invite sah)
+function clearRevokedIfNewerInvite(originalSpaceId, ownerEmail, inviteTimestamp) {
+  try {
+    if (!inviteTimestamp) return;
+    const cleanEmail = (ownerEmail || '').toLowerCase().trim();
+    const list = getRevokedSpaces();
+    const filtered = list.filter(item => {
+      const sameOwner = (cleanEmail && item.ownerEmail)
+        ? item.ownerEmail === cleanEmail
+        : (originalSpaceId && item.originalSpaceId === originalSpaceId);
+      return !(sameOwner && (item.revokedAt || 0) < inviteTimestamp);
+    });
+    if (filtered.length !== list.length) {
+      localStorage.setItem('sakukita_revoked_spaces_v1', JSON.stringify(filtered));
+    }
+  } catch (e) {}
 }
 
 function getProcessedCloudInvites() {
@@ -4324,19 +4346,22 @@ function processUrlJoinSpaceParam() {
   }
 }
 
-function applyRemoteSpaceJoin(data, sourceLabel, switchActive = true) {
+function applyRemoteSpaceJoin(data, sourceLabel, switchActive = true, inviteTimestamp = 0) {
   const spaceObj = data.space || data;
   const rawSpaceId = data.spaceId || spaceObj.id;
-  if (!rawSpaceId) return;
+  if (!rawSpaceId) return false;
 
   const ownerName = spaceObj.ownerName || 'Pasangan';
   const ownerEmail = spaceObj.ownerEmail || '';
   const incomingOwnerId = spaceObj.ownerId || 'owner_remote';
 
+  // Undangan baru (lebih baru dari pencabutan lama) boleh menyambung kembali
+  clearRevokedIfNewerInvite(rawSpaceId, ownerEmail, inviteTimestamp);
+
   // Security & Stability: Never re-import revoked/disconnected space
   if (isSpaceRevoked(null, rawSpaceId, ownerEmail)) {
     console.warn('Skipping revoked space join:', rawSpaceId, ownerEmail);
-    return;
+    return false;
   }
 
   // 1. Generate unique partner owner ID in local users (distinct from local activeUserId!)
@@ -4382,6 +4407,7 @@ function applyRemoteSpaceJoin(data, sourceLabel, switchActive = true) {
     ownerId: partnerOwnerId, // IMPORTANT: partner is owner, so activeUserId is VIEWER!
     allowedViewers: viewers,
     isRemoteShared: true,
+    joinedAt: Date.now(),
     budget: spaceObj.budget || 0,
     wallets: (spaceObj.wallets && spaceObj.wallets.length > 0) ? spaceObj.wallets : [
       { id: 'w-remote-1', name: 'Dompet Utama', balance: 0, color: '#3b82f6' }
@@ -4427,6 +4453,7 @@ function applyRemoteSpaceJoin(data, sourceLabel, switchActive = true) {
       `Buku Kas "${spaces[remoteSpaceId].name}" milik ${ownerName} telah tersedia di daftar pilihan buku kas.`
     );
   }
+  return true;
 }
 
 let cloudSyncTimer = null;
@@ -4478,7 +4505,8 @@ async function checkPendingCloudInvites() {
         const ownerEmail = (payload.space.ownerEmail || '').toLowerCase().trim();
         const inviteKey = `${rawSpaceId}_${ownerEmail}`;
 
-        // Never re-import if revoked or disconnected
+        // Never re-import if revoked or disconnected (kecuali undangan lebih baru dari pencabutan)
+        clearRevokedIfNewerInvite(rawSpaceId, ownerEmail, payload.timestamp || 0);
         if (isSpaceRevoked(null, rawSpaceId, ownerEmail)) {
           continue;
         }
@@ -4498,7 +4526,7 @@ async function checkPendingCloudInvites() {
 
         // Genuinely new invite in background: mark processed and add WITHOUT hijacking user's active view!
         markCloudInviteProcessed(inviteKey);
-        applyRemoteSpaceJoin(payload.space, 'Undangan Cloud Otomatis', false);
+        applyRemoteSpaceJoin(payload.space, 'Undangan Cloud Otomatis', false, payload.timestamp || 0);
       }
     }
   } catch (err) {}
@@ -4545,8 +4573,10 @@ async function pollSpaceFromCloud(spaceId, force = false) {
     const currentUser = getActiveUser();
     const myEmail = (currentUser && currentUser.email ? currentUser.email.toLowerCase().trim() : '');
 
-    // 1. Direct revocation detected
-    if (latestRevocation) {
+    const joinedAt = currentSpace.joinedAt || 0;
+
+    // 1. Direct revocation detected (abaikan pencabutan lama sebelum HP ini terhubung)
+    if (latestRevocation && (latestRevocation.timestamp || 0) > joinedAt) {
       const targetEmail = (latestRevocation.targetEmail || '').toLowerCase().trim();
       const targetUserId = latestRevocation.targetUserId || '';
       const isTargetMe = (!targetEmail && !targetUserId) || (myEmail && targetEmail === myEmail) || (targetUserId === activeUserId);
@@ -4572,7 +4602,11 @@ async function pollSpaceFromCloud(spaceId, force = false) {
       );
 
       // If owner removed viewer access, revoke and remove immediately!
-      if (!isStillAllowed) {
+      // Hanya cabut jika daftar penonton eksplisit tersedia DAN update lebih baru dari saat terhubung
+      // (update lama sebelum undangan tidak memuat email kita sehingga salah dianggap dicabut)
+      const hasViewerInfo = allowedViewers.length > 0 || allowedEmails.length > 0;
+      const updateIsFresh = (latestUpdate.timestamp || 0) > joinedAt;
+      if (!isStillAllowed && hasViewerInfo && updateIsFresh && myEmail) {
         handleRemoteSpaceRevoked(spaceId, sp.ownerName || 'Pemilik', false);
         return;
       }
@@ -4748,16 +4782,38 @@ async function executeFindInvitesForEmail(email) {
   if (btnText) btnText.textContent = '🔍 Cari Undangan di Cloud Sekarang';
 
   if (foundInvites.length > 0) {
-    // Undangan ditemukan
-    const latestInvite = foundInvites[foundInvites.length - 1];
-    applyRemoteSpaceJoin(latestInvite.space, 'Undangan Cloud');
+    // Sambungkan SEMUA undangan unik (bukan hanya yang terakhir), pemilik berbeda = akun pantau berbeda
+    foundInvites.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+    const latestPerSpace = {};
+    foundInvites.forEach(inv => {
+      const k = ((inv.space.ownerEmail || '').toLowerCase().trim() || inv.space.ownerId || '') + '|' + (inv.space.id || inv.space.spaceId);
+      latestPerSpace[k] = inv;
+    });
+    const uniqueInvites = Object.values(latestPerSpace);
+    const connected = [];
+    uniqueInvites.forEach((inv, idx) => {
+      const ok = applyRemoteSpaceJoin(inv.space, 'Undangan Cloud', idx === uniqueInvites.length - 1, inv.timestamp || 0);
+      if (ok) connected.push(inv);
+    });
 
+    if (connected.length === 0) {
+      if (resultBox) {
+        resultBox.innerHTML = `
+          <div style="padding:12px; border-radius:10px; background:rgba(244,63,94,0.1); border:1px solid rgba(244,63,94,0.25); font-size:0.78rem; color:#fca5a5;">
+            ⚠️ Undangan ditemukan tetapi tidak dapat disambungkan (akses sebelumnya dicabut/diblokir). Minta pemilik mengirim undangan baru.
+          </div>
+        `;
+      }
+      return;
+    }
+
+    const latestInvite = connected[connected.length - 1];
     if (resultBox) {
       resultBox.innerHTML = `
         <div style="padding:12px; border-radius:10px; background:rgba(16,185,129,0.15); border:1px solid rgba(16,185,129,0.4); font-size:0.8rem; color:#a7f3d0;">
           <div style="font-weight:700; margin-bottom:4px;">🎉 Undangan Ditemukan &amp; Berhasil Terhubung!</div>
           <div>Buku Kas <b>"${escapeHtml(latestInvite.space.name)}"</b> milik <b>${escapeHtml(latestInvite.space.ownerName || 'Pasangan')}</b> telah disambungkan ke HP ini.</div>
-          <button type="button" class="btn-submit-tx" style="margin-top:10px; padding:8px 12px; font-size:0.8rem;" onclick="closeModal('modal-find-invite'); closeModal('modal-collaboration'); renderAll();">
+          <button type="button" class="btn-submit-tx" style="margin-top:10px; padding:8px 12px; font-size:0.8rem;" onclick="closeModal('modal-find-invite'); closeModal('modal-collaboration'); validateActiveSpace(); renderUserPills(); updateSpaceSelectorUI(); renderAll();">
             👉 Buka Buku Kas Sekarang
           </button>
         </div>
